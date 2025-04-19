@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -169,6 +171,39 @@ const OrderDetail = () => {
     return estados[estado] || { color: 'gray', text: estado };
   };
 
+  const generatePDF = async () => {
+    try {
+      const element = document.getElementById('order-detail');
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        logging: false,
+        useCORS: true
+      });
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`pedido-${pedido.numeroPedido}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -207,15 +242,27 @@ const OrderDetail = () => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Detalles del Pedido</h1>
         
-        <Link to="/pedidos" className="text-primary-600 hover:underline flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-          Volver a mis pedidos
-        </Link>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={generatePDF}
+            className="bg-[#FFD15C] hover:bg-[#FFC132] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Descargar Comprobante
+          </button>
+          
+          <Link to="/pedidos" className="text-primary-600 hover:underline flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            Volver a mis pedidos
+          </Link>
+        </div>
       </div>
       
-      <div className="bg-white shadow-md rounded-lg overflow-hidden mb-8">
+      <div id="order-detail" className="bg-white shadow-md rounded-lg overflow-hidden mb-8">
         <div className="p-6">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
             <div>

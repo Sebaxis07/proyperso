@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.2",
+    "@react-pdf/renderer": "^4.3.0",
     "axios": "^1.8.4",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.7.4",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "pdfmake": "^0.2.18",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
