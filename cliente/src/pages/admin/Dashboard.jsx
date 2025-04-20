@@ -2,19 +2,45 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { 
+  LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalProductos: 0,
     totalPedidos: 0,
     totalUsuarios: 0,
-    pedidosPendientes: 0
+    pedidosPendientes: 0,
+    totalMontosPedidos: 0
   });
+  const [graphData, setGraphData] = useState({
+    pedidosMensuales: [],
+    productosMasPedidos: [],
+    estadoPedidos: [],
+    usuariosPorMes: []
+  });
+  const [reporteMensual, setReporteMensual] = useState({
+    montoPedidosMes: 0,
+    pedidosMes: 0,
+    clientesNuevosMes: 0,
+    ticketPromedio: 0,
+    productosMasPedidosMes: [],
+    comparacionMesAnterior: {
+      pedidos: 0,
+      porcentaje: 0
+    }
+  });
+  const [ultimosPedidos, setUltimosPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Colores para gráficos
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
@@ -28,25 +54,65 @@ const AdminDashboard = () => {
             'Authorization': `Bearer ${token}`
           }
         };
-
         // Obtener datos de diferentes endpoints
         const [productos, pedidos, usuarios] = await Promise.all([
           axios.get('/api/productos', config),
-          axios.get('/api/pedidos', config),
+          axios.get('/api/pedidos?admin=true', config), // Usar la ruta administrativa específica
           axios.get('/api/usuarios', config)
         ]);
         
-        const pedidosPendientes = pedidos.data.data.filter(
+        // Filtrar pedidos pendientes
+        const pedidosList = pedidos.data.data || [];
+        const pedidosPendientes = pedidosList.filter(
           pedido => pedido.estadoPedido === 'pendiente'
         ).length;
 
+        // Calcular total de montos de pedidos
+        const totalMontosPedidos = pedidosList.reduce(
+          (total, pedido) => total + (pedido.precioTotal || 0), 
+          0
+        );
+
+        // Preparar datos para gráficos
+        
+        // Procesar los datos para los pedidos mensuales
+        const pedidosPorMes = procesarPedidosMensuales(pedidosList);
+        
+        // Procesar los datos para productos más pedidos
+        const topProductos = procesarProductosMasPedidos(pedidosList);
+        
+        // Procesar estado de pedidos
+        const estadoPedidosData = procesarEstadoPedidos(pedidosList);
+        
+        // Procesar usuarios por mes
+        const usuariosPorMes = procesarUsuariosPorMes(pedidosList, usuarios.data.data || []);
+        
+        // Generar reporte mensual
+        const reporteMes = generarReporteMensual(pedidosList, usuarios.data.data || []);
+        
+        // Guardar últimos pedidos para mostrar en la tabla
+        const ultimos = pedidosList.sort((a, b) => 
+          new Date(b.fechaCreacion) - new Date(a.fechaCreacion)
+        ).slice(0, 5);
+
+        // Actualizar estados
         setStats({
           totalProductos: productos.data.total || 0,
           totalPedidos: pedidos.data.count || 0,
           totalUsuarios: usuarios.data.count || 0,
-          pedidosPendientes
+          pedidosPendientes,
+          totalMontosPedidos
         });
         
+        setGraphData({
+          pedidosMensuales: pedidosPorMes,
+          productosMasPedidos: topProductos,
+          estadoPedidos: estadoPedidosData,
+          usuariosPorMes: usuariosPorMes
+        });
+        
+        setReporteMensual(reporteMes);
+        setUltimosPedidos(ultimos);
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar estadísticas:', err);
@@ -55,7 +121,226 @@ const AdminDashboard = () => {
       }
     };
 
-    fetchStats();
+    // Función para procesar pedidos mensuales
+    const procesarPedidosMensuales = (pedidos) => {
+      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const pedidosPorMes = Array(12).fill().map((_, i) => ({
+        name: meses[i],
+        montos: 0,
+        cantidad: 0
+      }));
+      
+      pedidos.forEach(pedido => {
+        if (pedido.fechaCreacion) {
+          const fecha = new Date(pedido.fechaCreacion);
+          const mesIndex = fecha.getMonth();
+          
+          pedidosPorMes[mesIndex].montos += pedido.precioTotal || 0;
+          pedidosPorMes[mesIndex].cantidad += 1;
+        }
+      });
+      
+      // Filtrar solo los meses con datos
+      return pedidosPorMes.filter(mes => mes.cantidad > 0);
+    };
+    
+    // Función para procesar productos más pedidos
+    const procesarProductosMasPedidos = (pedidos) => {
+      const productosCount = {};
+      
+      pedidos.forEach(pedido => {
+        if (pedido.items && Array.isArray(pedido.items)) {
+          pedido.items.forEach(item => {
+            const productoId = item.producto?._id || item.productoId;
+            const nombre = item.producto?.nombre || 'Producto';
+            const cantidad = item.cantidad || 1;
+            
+            if (!productosCount[productoId]) {
+              productosCount[productoId] = {
+                name: nombre,
+                value: 0
+              };
+            }
+            
+            productosCount[productoId].value += cantidad;
+          });
+        }
+      });
+      
+      // Convertir a array y ordenar
+      return Object.values(productosCount)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+    };
+    
+    // Función para procesar estado de pedidos
+    const procesarEstadoPedidos = (pedidos) => {
+      const estados = {};
+      
+      pedidos.forEach(pedido => {
+        const estado = pedido.estadoPedido || 'pendiente';
+        
+        if (!estados[estado]) {
+          estados[estado] = {
+            name: capitalizarPrimeraLetra(estado),
+            value: 0
+          };
+        }
+        
+        estados[estado].value += 1;
+      });
+      
+      // Convertir a array
+      return Object.values(estados);
+    };
+    
+    // Función para procesar usuarios por mes
+    const procesarUsuariosPorMes = (pedidos, usuarios) => {
+      const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const usuariosPorMes = Array(12).fill().map((_, i) => ({
+        name: meses[i],
+        nuevos: 0,
+        recurrentes: 0
+      }));
+      
+      // Procesar usuarios nuevos por fecha de registro
+      usuarios.forEach(usuario => {
+        if (usuario.fechaCreacion) {
+          const fecha = new Date(usuario.fechaCreacion);
+          const mesActual = new Date().getMonth();
+          const anioActual = new Date().getFullYear();
+          
+          if (fecha.getFullYear() === anioActual && fecha.getMonth() <= mesActual) {
+            usuariosPorMes[fecha.getMonth()].nuevos += 1;
+          }
+        }
+      });
+      
+      // Procesar usuarios recurrentes (los que hacen pedidos)
+      const clientesPorMes = {};
+      
+      pedidos.forEach(pedido => {
+        if (pedido.fechaCreacion && pedido.usuario) {
+          const fecha = new Date(pedido.fechaCreacion);
+          const mesActual = new Date().getMonth();
+          const anioActual = new Date().getFullYear();
+          
+          if (fecha.getFullYear() === anioActual && fecha.getMonth() <= mesActual) {
+            const mesIndex = fecha.getMonth();
+            const userId = pedido.usuario._id || pedido.usuarioId;
+            
+            if (!clientesPorMes[mesIndex]) {
+              clientesPorMes[mesIndex] = new Set();
+            }
+            
+            clientesPorMes[mesIndex].add(userId);
+          }
+        }
+      });
+      
+      // Actualizar usuarios recurrentes
+      Object.entries(clientesPorMes).forEach(([mesIndex, usuarios]) => {
+        usuariosPorMes[mesIndex].recurrentes = usuarios.size;
+      });
+      
+      // Filtrar solo los meses con datos
+      return usuariosPorMes.filter(mes => mes.nuevos > 0 || mes.recurrentes > 0);
+    };
+    
+    // Función auxiliar para capitalizar
+    const capitalizarPrimeraLetra = (texto) => {
+      return texto.charAt(0).toUpperCase() + texto.slice(1);
+    };
+    
+    // Función para generar el reporte mensual
+    const generarReporteMensual = (pedidos, usuarios) => {
+      const fechaActual = new Date();
+      const mesActual = fechaActual.getMonth();
+      const anioActual = fechaActual.getFullYear();
+      
+      // Filtrar pedidos del mes actual
+      const pedidosMesActual = pedidos.filter(pedido => {
+        const fechaPedido = new Date(pedido.fechaCreacion);
+        return fechaPedido.getMonth() === mesActual && fechaPedido.getFullYear() === anioActual;
+      });
+      
+      // Calcular montos de pedidos del mes
+      const montoPedidosMes = pedidosMesActual.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
+      
+      // Cantidad de pedidos del mes
+      const pedidosMes = pedidosMesActual.length;
+      
+      // Calcular ticket promedio
+      const ticketPromedio = pedidosMes > 0 ? montoPedidosMes / pedidosMes : 0;
+      
+      // Clientes nuevos del mes
+      const clientesNuevosMes = usuarios.filter(usuario => {
+        if (!usuario.fechaCreacion) return false;
+        const fechaRegistro = new Date(usuario.fechaCreacion);
+        return fechaRegistro.getMonth() === mesActual && fechaRegistro.getFullYear() === anioActual;
+      }).length;
+      
+      // Productos más pedidos del mes
+      const productosMesActual = {};
+      pedidosMesActual.forEach(pedido => {
+        if (pedido.items && Array.isArray(pedido.items)) {
+          pedido.items.forEach(item => {
+            const productoId = item.producto?._id || item.productoId;
+            const nombre = item.producto?.nombre || 'Producto';
+            const cantidad = item.cantidad || 1;
+            
+            if (!productosMesActual[productoId]) {
+              productosMesActual[productoId] = {
+                name: nombre,
+                value: 0,
+                montos: 0
+              };
+            }
+            
+            productosMesActual[productoId].value += cantidad;
+            productosMesActual[productoId].montos += (item.precio || 0) * cantidad;
+          });
+        }
+      });
+      
+      // Convertir a array y ordenar por cantidad
+      const topProductosMes = Object.values(productosMesActual)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+      
+      // Calcular comparación con mes anterior
+      const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
+      const anioMesAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
+      
+      // Filtrar pedidos del mes anterior
+      const pedidosMesAnterior = pedidos.filter(pedido => {
+        const fechaPedido = new Date(pedido.fechaCreacion);
+        return fechaPedido.getMonth() === mesAnterior && fechaPedido.getFullYear() === anioMesAnterior;
+      });
+      
+      // Calcular pedidos del mes anterior
+      const montoPedidosMesAnterior = pedidosMesAnterior.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
+      
+      // Calcular porcentaje de cambio
+      let porcentajeCambio = 0;
+      if (montoPedidosMesAnterior > 0) {
+        porcentajeCambio = ((montoPedidosMes - montoPedidosMesAnterior) / montoPedidosMesAnterior) * 100;
+      }
+      
+      return {
+        montoPedidosMes,
+        pedidosMes,
+        clientesNuevosMes,
+        ticketPromedio,
+        productosMasPedidosMes: topProductosMes,
+        comparacionMesAnterior: {
+          pedidos: montoPedidosMesAnterior,
+          porcentaje: porcentajeCambio
+        }
+      };
+    };
+
+    fetchData();
   }, []);
 
   if (loading) {
@@ -139,24 +424,167 @@ const AdminDashboard = () => {
           </div>
         </div>
         
-        {/* Tarjeta Pedidos Pendientes */}
+        {/* Tarjeta Total de Montos de Pedidos */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="ml-4">
-              <h2 className="text-gray-600 text-sm">Pedidos Pendientes</h2>
-              <p className="text-2xl font-semibold">{stats.pedidosPendientes}</p>
+              <h2 className="text-gray-600 text-sm">Total Montos Pedidos</h2>
+              <p className="text-2xl font-semibold">${stats.totalMontosPedidos.toLocaleString()}</p>
             </div>
           </div>
           <div className="mt-4">
-            <Link to="/admin/pedidos?estado=pendiente" className="text-yellow-600 hover:text-yellow-800 text-sm font-medium">
-              Ver pedidos pendientes →
+            <Link to="/admin/reportes" className="text-yellow-600 hover:text-yellow-800 text-sm font-medium">
+              Ver reportes →
             </Link>
           </div>
+        </div>
+      </div>
+      
+      {/* Gráficos - Sección Nueva */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Gráfico de pedidos mensuales */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">Pedidos Mensuales</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={graphData.pedidosMensuales}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="montos" stroke="#8884d8" activeDot={{ r: 8 }} name="Montos ($)" />
+              <Line type="monotone" dataKey="cantidad" stroke="#82ca9d" name="Cantidad de Pedidos" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        
+        {/* Gráfico de productos más pedidos */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">Productos Más Pedidos</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={graphData.productosMasPedidos}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#8884d8" name="Unidades Pedidas" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        
+        {/* Gráfico de usuarios por mes */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">Usuarios por Mes</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={graphData.usuariosPorMes}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Area type="monotone" dataKey="recurrentes" stackId="1" stroke="#8884d8" fill="#8884d8" name="Clientes Recurrentes" />
+              <Area type="monotone" dataKey="nuevos" stackId="1" stroke="#82ca9d" fill="#82ca9d" name="Clientes Nuevos" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        
+        {/* Gráfico de estado de pedidos */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">Estado de Pedidos</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie 
+                data={graphData.estadoPedidos} 
+                cx="50%" 
+                cy="50%" 
+                labelLine={false}
+                outerRadius={100} 
+                fill="#8884d8" 
+                dataKey="value"
+                nameKey="name"
+                label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              >
+                {graphData.estadoPedidos.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      
+      {/* Reporte Mensual - Nueva sección */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-xl font-semibold mb-4">
+          Reporte Mensual ({new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()})
+        </h2>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Tarjetas de métricas principales */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded shadow">
+                <h3 className="text-sm text-gray-500 font-medium">Montos de Pedidos del Mes</h3>
+                <p className="text-2xl font-bold">${reporteMensual.montoPedidosMes.toLocaleString()}</p>
+                <div className={`flex items-center mt-2 text-sm ${reporteMensual.comparacionMesAnterior.porcentaje >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span>{reporteMensual.comparacionMesAnterior.porcentaje >= 0 ? '↑' : '↓'} {Math.abs(reporteMensual.comparacionMesAnterior.porcentaje).toFixed(1)}%</span>
+                  <span className="ml-1 text-gray-500">vs mes anterior</span>
+                </div>
+              </div>
+              
+              <div className="bg-white p-4 rounded shadow">
+                <h3 className="text-sm text-gray-500 font-medium">Cantidad de Pedidos del Mes</h3>
+                <p className="text-2xl font-bold">{reporteMensual.pedidosMes}</p>
+              </div>
+              
+              <div className="bg-white p-4 rounded shadow">
+                <h3 className="text-sm text-gray-500 font-medium">Ticket Promedio</h3>
+                <p className="text-2xl font-bold">${reporteMensual.ticketPromedio.toFixed(2)}</p>
+              </div>
+              
+              <div className="bg-white p-4 rounded shadow">
+                <h3 className="text-sm text-gray-500 font-medium">Clientes Nuevos</h3>
+                <p className="text-2xl font-bold">{reporteMensual.clientesNuevosMes}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Top productos del mes */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-md font-medium mb-4">Productos Más Pedidos del Mes</h3>
+            <div className="space-y-2">
+              {reporteMensual.productosMasPedidosMes.map((producto, index) => (
+                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <div className="flex-1">
+                    <p className="font-medium">{producto.name}</p>
+                    <p className="text-sm text-gray-500">{producto.value} unidades</p>
+                  </div>
+                  <p className="font-medium">${producto.montos.toLocaleString()}</p>
+                </div>
+              ))}
+              
+              {reporteMensual.productosMasPedidosMes.length === 0 && (
+                <p className="text-gray-500 text-center py-4">No hay datos de pedidos para este mes</p>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 text-right">
+          <Link to="/admin/reportes?tipo=mensual" className="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center justify-end">
+            <span>Ver reporte completo</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </Link>
         </div>
       </div>
       
@@ -165,7 +593,7 @@ const AdminDashboard = () => {
         <h2 className="text-xl font-semibold mb-4">Acciones rápidas</h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link to="/admin/productos/nuevo" className="bg-gray-50 hover:bg-gray-100 p-4 rounded-md border border-gray-200 flex items-center">
+        <Link to="/admin/productos/nuevo" className="bg-gray-50 hover:bg-gray-100 p-4 rounded-md border border-gray-200 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -195,7 +623,7 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      {/* Últimos pedidos (ejemplo) */}
+      {/* Últimos pedidos */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold mb-4">Últimos pedidos</h2>
         
@@ -224,82 +652,46 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {/* Si hay datos, mostrarían aquí. Por ahora, solo ejemplos estáticos */}
-              <tr>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">#PM-230419-12345</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">Juan Pérez</div>
-                  <div className="text-sm text-gray-500">juan@ejemplo.com</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">19/04/2025</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">$24.990</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                    Pendiente
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <Link to="/admin/pedidos/1" className="text-primary-600 hover:text-primary-800 mr-3">
-                    Ver
-                  </Link>
-                </td>
-              </tr>
-              <tr>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">#PM-230419-12344</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">María González</div>
-                  <div className="text-sm text-gray-500">maria@ejemplo.com</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">18/04/2025</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">$36.700</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Pagado
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <Link to="/admin/pedidos/2" className="text-primary-600 hover:text-primary-800 mr-3">
-                    Ver
-                  </Link>
-                </td>
-              </tr>
-              <tr>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">#PM-230418-12343</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">Carlos Rodríguez</div>
-                  <div className="text-sm text-gray-500">carlos@ejemplo.com</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">17/04/2025</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">$45.900</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                    Enviado
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <Link to="/admin/pedidos/3" className="text-primary-600 hover:text-primary-800 mr-3">
-                    Ver
-                  </Link>
-                </td>
-              </tr>
+              {ultimosPedidos.length > 0 ? (
+                ultimosPedidos.map((pedido) => (
+                  <tr key={pedido._id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">#{pedido._id.substring(0, 8)}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{pedido.usuario?.nombre || 'Cliente'}</div>
+                      <div className="text-sm text-gray-500">{pedido.usuario?.email || ''}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(pedido.fechaCreacion).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">${pedido.precioTotal?.toLocaleString() || '0'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${pedido.estadoPedido === 'pagado' ? 'bg-green-100 text-green-800' : 
+                        pedido.estadoPedido === 'enviado' ? 'bg-blue-100 text-blue-800' : 
+                        'bg-yellow-100 text-yellow-800'}`}>
+                        {pedido.estadoPedido || 'pendiente'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <Link to={`/admin/pedidos/${pedido._id}`} className="text-primary-600 hover:text-primary-800 mr-3">
+                        Ver
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                    No hay pedidos recientes
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

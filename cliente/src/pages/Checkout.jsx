@@ -109,6 +109,11 @@ const Checkout = () => {
         if (!token) {
           throw new Error('No estás autenticado');
         }
+
+        // Verificar si hay items en el carrito
+        if (cart.length === 0) {
+          throw new Error('No hay productos en el carrito');
+        }
         
         const config = {
           headers: {
@@ -117,30 +122,36 @@ const Checkout = () => {
           }
         };
 
-        // Preparar datos del pedido
+        // Modificación en la preparación de datos
         const pedidoData = {
           productos: cart.map(item => ({
             producto: item._id,
-            cantidad: item.cantidad
+            cantidad: item.cantidad,
+            precio: item.precio,
+            nombre: item.nombre
           })),
           direccionEnvio: formData.direccionEnvio,
-          metodoPago: formData.metodoPago
+          metodoPago: formData.metodoPago,
+          total: totalConEnvio,
+          costoEnvio: costoEnvio,
+          estado: 'pendiente'
         };
 
-        // Crear pedido
+        console.log('Datos enviados:', pedidoData); // Para debug
+
         const res = await axios.post('/api/pedidos', pedidoData, config);
         
-        // Guardar la orden creada
+        if (res.data.success === false) {
+          throw new Error(res.data.message || 'Error al crear el pedido');
+        }
+
         setOrdenCreada(res.data.data);
-        
-        // Limpiar carrito
         clearCart();
-        
         setLoading(false);
       } catch (err) {
         setLoading(false);
-        setError(err.response?.data?.msg || 'Error al procesar el pedido. Por favor, intenta nuevamente.');
-        console.error('Error al crear pedido:', err);
+        console.error('Error completo:', err);
+        setError(err.response?.data?.msg || err.message || 'Error al procesar el pedido');
       }
     }
   };
@@ -193,8 +204,8 @@ const Checkout = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Formulario de checkout */}
-        <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg overflow-hidden">
+        <form onSubmit={handleSubmit} className="lg:col-span-2">
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-6">Dirección de Envío</h2>
               
@@ -339,66 +350,65 @@ const Checkout = () => {
                 </div>
               </div>
             </div>
-          </form>
-        </div>
-
-        {/* Resumen del pedido */}
-        <div className="lg:col-span-1">
-          <div className="bg-white shadow-md rounded-lg p-6 sticky top-6">
-            <h2 className="text-xl font-semibold mb-6">Resumen del pedido</h2>
-            
-            <div className="max-h-60 overflow-y-auto mb-6">
-              <ul className="divide-y divide-gray-200">
-                {cart.map((item) => (
-                  <li key={item._id} className="py-3 flex justify-between">
-                    <div>
-                      <p className="font-medium">{item.nombre}</p>
-                      <p className="text-sm text-gray-600">Cantidad: {item.cantidad}</p>
-                    </div>
-                    <p className="font-medium">{formatPrice(item.precio * item.cantidad)}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">{formatPrice(total)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Envío</span>
-                {costoEnvio === 0 ? (
-                  <span className="font-medium text-green-600">GRATIS</span>
-                ) : (
-                  <span className="font-medium">{formatPrice(costoEnvio)}</span>
-                )}
-              </div>
-              <div className="h-px bg-gray-200 my-3"></div>
-              <div className="flex justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="font-bold text-xl">{formatPrice(totalConEnvio)}</span>
-              </div>
-            </div>
-            
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="btn btn-primary w-full py-3 text-center"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Procesando...
-                </span>
-              ) : 'Confirmar Pedido'}
-            </button>
           </div>
-        </div>
+
+          {/* Resumen del pedido */}
+          <div className="lg:col-span-1">
+            <div className="bg-white shadow-md rounded-lg p-6 sticky top-6">
+              <h2 className="text-xl font-semibold mb-6">Resumen del pedido</h2>
+              
+              <div className="max-h-60 overflow-y-auto mb-6">
+                <ul className="divide-y divide-gray-200">
+                  {cart.map((item) => (
+                    <li key={item._id} className="py-3 flex justify-between">
+                      <div>
+                        <p className="font-medium">{item.nombre}</p>
+                        <p className="text-sm text-gray-600">Cantidad: {item.cantidad}</p>
+                      </div>
+                      <p className="font-medium">{formatPrice(item.precio * item.cantidad)}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">{formatPrice(total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Envío</span>
+                  {costoEnvio === 0 ? (
+                    <span className="font-medium text-green-600">GRATIS</span>
+                  ) : (
+                    <span className="font-medium">{formatPrice(costoEnvio)}</span>
+                  )}
+                </div>
+                <div className="h-px bg-gray-200 my-3"></div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-bold text-xl">{formatPrice(totalConEnvio)}</span>
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary w-full py-3 text-center"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Procesando...
+                  </span>
+                ) : 'Confirmar Pedido'}
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );

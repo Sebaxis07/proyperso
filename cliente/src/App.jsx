@@ -4,6 +4,7 @@ import AuthProvider from './context/AuthContext';
 import CartProvider from './context/CartContext';
 import PrivateRoute from './components/routing/PrivateRoute';
 import AdminRoute from './components/routing/AdminRoute';
+
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -17,6 +18,7 @@ import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import NotFound from './pages/NotFound';
+import ConfirmacionReserva from './pages/ConfirmacionReserva';
 
 // Páginas de Administración
 import AdminDashboard from './pages/admin/Dashboard';
@@ -62,6 +64,11 @@ function App() {
                     <Orders />
                   </PrivateRoute>
                 } />
+                <Route path="/confirmacion-reserva/:id" element={
+                  <PrivateRoute>
+                    <ConfirmacionReserva />
+                  </PrivateRoute>
+                } />
                 <Route path="/pedidos/:id" element={
                   <PrivateRoute>
                     <OrderDetail />
@@ -100,7 +107,6 @@ function App() {
   </AdminRoute>
 } />
 
-// El bloque completo debería verse así:
 {/* Rutas de administración */}
 <Route path="/admin" element={
   <AdminRoute>

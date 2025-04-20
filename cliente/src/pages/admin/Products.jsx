@@ -175,6 +175,10 @@ const AdminProducts = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  {/* Add new ID column */}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ID
+                  </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Producto
                   </th>
@@ -198,6 +202,12 @@ const AdminProducts = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {productosFiltrados.map((producto) => (
                   <tr key={producto._id}>
+                    {/* Add ID cell */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500 font-mono">
+                        {producto._id}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">

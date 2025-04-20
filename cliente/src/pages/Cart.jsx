@@ -18,6 +18,23 @@ const Cart = () => {
   const costoEnvio = total > 30000 ? 0 : 3990;
   const totalConEnvio = total + costoEnvio;
 
+  // Modificar la función de actualización de cantidad
+  const handleQuantityChange = (itemId, newQuantity, stockDisponible) => {
+    if (newQuantity < 1) {
+      return;
+    }
+    
+    if (newQuantity > stockDisponible) {
+      // Opcional: Mostrar un mensaje de error
+      alert(`Solo hay ${stockDisponible} unidades disponibles`);
+      // Establecer la cantidad al máximo disponible
+      updateQuantity(itemId, stockDisponible);
+      return;
+    }
+    
+    updateQuantity(itemId, newQuantity);
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 animate-fadeIn">
       <h1 className="text-4xl font-bold mb-8 text-gray-800 flex items-center gap-3">
@@ -87,8 +104,9 @@ const Cart = () => {
                           {/* Controles de cantidad */}
                           <div className="flex items-center bg-gray-100 rounded-lg overflow-hidden shadow-inner">
                             <button
-                              onClick={() => updateQuantity(item._id, item.cantidad - 1)}
-                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                              onClick={() => handleQuantityChange(item._id, item.cantidad - 1, item.stock)}
+                              disabled={item.cantidad <= 1}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50"
                             >
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -97,13 +115,15 @@ const Cart = () => {
                             <input
                               type="number"
                               min="1"
+                              max={item.stock}
                               value={item.cantidad}
-                              onChange={(e) => updateQuantity(item._id, parseInt(e.target.value))}
+                              onChange={(e) => handleQuantityChange(item._id, parseInt(e.target.value), item.stock)}
                               className="w-12 h-8 border-0 bg-transparent text-center text-base font-semibold"
                             />
                             <button
-                              onClick={() => updateQuantity(item._id, item.cantidad + 1)}
-                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                              onClick={() => handleQuantityChange(item._id, item.cantidad + 1, item.stock)}
+                              disabled={item.cantidad >= item.stock}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 transition-colors disabled:opacity-50"
                             >
                               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -126,6 +146,12 @@ const Cart = () => {
                             </button>
                           </div>
                         </div>
+                        {/* Agregar indicador de stock */}
+                        {item.cantidad >= item.stock && (
+                          <p className="text-sm text-red-500 mt-1">
+                            Stock máximo alcanzado
+                          </p>
+                        )}
                       </div>
                     </div>
                   </li>

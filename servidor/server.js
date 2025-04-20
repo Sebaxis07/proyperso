@@ -12,6 +12,8 @@ import productosRoutes from './routes/productos.js';
 import pedidosRoutes from './routes/pedidos.js';
 import usuariosRoutes from './routes/usuarios.js';
 import uploadRoutes from './routes/upload.js';
+import reportesRoutes from './routes/reportes.routes.js';
+import exportRoutes from './routes/export.routes.js';
 
 // ES Module fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -64,6 +66,8 @@ app.use('/api/productos', productosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/reportes', reportesRoutes);
+app.use('/api/reportes', exportRoutes); // Las rutas de exportación también están bajo /api/reportes
 
 // Ruta de prueba
 app.get('/', (req, res) => {

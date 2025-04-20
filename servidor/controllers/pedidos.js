@@ -9,6 +9,10 @@ export async function crearPedido(req, res) {
   try {
     const { productos, direccionEnvio, metodoPago } = req.body;
 
+    // Añadir logs para debugging
+    console.log('Datos recibidos:', { productos, direccionEnvio, metodoPago });
+    console.log('Usuario:', req.usuario);
+
     if (!productos || productos.length === 0) {
       return res.status(400).json({ msg: 'No hay productos en el pedido' });
     }
@@ -21,11 +25,17 @@ export async function crearPedido(req, res) {
       const producto = await Producto.findById(item.producto);
 
       if (!producto) {
-        return res.status(404).json({ msg: `Producto con ID ${item.producto} no encontrado` });
+        return res.status(404).json({ 
+          msg: `Producto con ID ${item.producto} no encontrado`,
+          error: true
+        });
       }
 
       if (producto.stock < item.cantidad) {
-        return res.status(400).json({ msg: `Stock insuficiente para ${producto.nombre}` });
+        return res.status(400).json({ 
+          msg: `Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}`,
+          error: true
+        });
       }
 
       const precioUnitario = producto.enOferta 
@@ -41,13 +51,9 @@ export async function crearPedido(req, res) {
         precioUnitario,
         subtotal: subtotalItem
       });
-
-      // Actualizar stock
-      producto.stock -= item.cantidad;
-      await producto.save();
     }
 
-    // Calcular costo de envío (ejemplo simplificado)
+    // Calcular costo de envío
     const costoEnvio = subtotal > 30000 ? 0 : 3990;
     const total = subtotal + costoEnvio;
 
@@ -59,8 +65,17 @@ export async function crearPedido(req, res) {
       metodoPago,
       subtotal,
       costoEnvio,
-      total
+      total,
+      estadoPedido: 'pendiente',
+      estadoPago: metodoPago === 'transferencia' ? 'pendiente' : 'pagado'
     });
+
+    // Actualizar stock después de confirmar que todo está bien
+    for (const item of productos) {
+      const producto = await Producto.findById(item.producto);
+      producto.stock -= item.cantidad;
+      await producto.save();
+    }
 
     await nuevoPedido.save();
 
@@ -70,8 +85,11 @@ export async function crearPedido(req, res) {
     });
 
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ msg: 'Error en el servidor' });
+    console.error('Error completo:', err);
+    return res.status(500).json({ 
+      msg: 'Error en el servidor',
+      error: err.message 
+    });
   }
 }
 
@@ -203,6 +221,31 @@ export async function actualizarEstadoPedido(req, res) {
     res.status(500).json({ msg: 'Error en el servidor' });
   }
 }
+
+// @desc    Obtener todos los pedidos (solo admin)
+// @route   GET /api/pedidos/admin/todos
+// @access  Private/Admin
+export const getPedidosAdmin = async (req, res) => {
+  try {
+    const pedidos = await Pedido.find()
+      .populate('usuario', 'nombre email')
+      .populate('productos.producto', 'nombre precio') // <-- Cambiado de 'items' a 'productos'
+      .sort({ createdAt: -1 }); // <-- Asegúrate de que este campo existe en tu esquema
+    
+    res.json({
+      success: true,
+      count: pedidos.length,
+      data: pedidos
+    });
+  } catch (error) {
+    console.error('Error al obtener pedidos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener pedidos',
+      error: error.message
+    });
+  }
+};
 
 // @desc    Cancelar pedido
 // @route   PUT /api/pedidos/:id/cancelar
