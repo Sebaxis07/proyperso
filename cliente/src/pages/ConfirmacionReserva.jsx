@@ -1,4 +1,3 @@
-// cliente/src/pages/ConfirmacionReserva.jsx
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -43,7 +42,6 @@ const ConfirmacionReserva = () => {
     }
   }, [id]);
 
-  // Formatear precio
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -51,7 +49,6 @@ const ConfirmacionReserva = () => {
     }).format(price);
   };
 
-  // Formatear fecha
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     return new Date(dateString).toLocaleDateString('es-CL', options);
@@ -98,7 +95,6 @@ const ConfirmacionReserva = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 animate-fadeIn">
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Encabezado */}
         <div className="bg-green-50 p-6 border-b">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -119,10 +115,8 @@ const ConfirmacionReserva = () => {
           </div>
         </div>
 
-        {/* Detalles del pedido */}
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Información general */}
             <div>
               <h2 className="text-lg font-semibold mb-3 text-gray-800">Detalles del pedido</h2>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -163,7 +157,6 @@ const ConfirmacionReserva = () => {
               </div>
             </div>
 
-            {/* Dirección de envío */}
             <div>
               <h2 className="text-lg font-semibold mb-3 text-gray-800">Dirección de envío</h2>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -177,7 +170,6 @@ const ConfirmacionReserva = () => {
             </div>
           </div>
 
-          {/* Productos */}
           <h2 className="text-lg font-semibold mb-3 text-gray-800">Productos</h2>
           <div className="bg-gray-50 rounded-lg overflow-hidden mb-6">
             <table className="min-w-full divide-y divide-gray-200">
@@ -233,7 +225,6 @@ const ConfirmacionReserva = () => {
             </table>
           </div>
 
-          {/* Resumen de costos */}
           <div className="flex justify-end">
             <div className="w-full md:w-1/2 lg:w-1/3">
               <div className="bg-gray-50 rounded-lg p-4">
@@ -262,7 +253,6 @@ const ConfirmacionReserva = () => {
           </div>
         </div>
 
-        {/* Acciones */}
         <div className="bg-gray-50 p-6 border-t">
           <div className="flex flex-col md:flex-row gap-4 justify-end">
             <button 
@@ -292,7 +282,6 @@ const ConfirmacionReserva = () => {
         </div>
       </div>
       
-      {/* Mensaje extra */}
       <div className="mt-8 text-center">
         <p className="text-gray-600 mb-2">Recibirás un correo electrónico con los detalles de tu pedido</p>
         <p className="text-gray-700">¿Tienes alguna pregunta? <a href="/contacto" className="text-primary-600 hover:underline">Contáctanos</a></p>

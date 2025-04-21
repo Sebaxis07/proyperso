@@ -8,30 +8,23 @@ import {
 } from 'recharts';
 
 const Reportes = () => {
-  // Estado para almacenar tipo de reporte actual
   const [reporteActual, setReporteActual] = useState('mensual');
   
-  // Estados para filtros
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState({
     mes: new Date().getMonth() + 1,
     anio: new Date().getFullYear()
   });
   
-  // Estado para almacenar datos del reporte
   const [reporteData, setReporteData] = useState(null);
   
-  // Estados de carga y error
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Navegación y ubicación
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Colores para gráficos
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   
-  // Al cargar el componente, verificar query params para establecer el tipo de reporte
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const tipo = searchParams.get('tipo');
@@ -50,11 +43,9 @@ const Reportes = () => {
       });
     }
     
-    // Cargar reporte al iniciar
     cargarReporte();
   }, [location.search]);
   
-  // Formatear número como moneda
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -63,11 +54,9 @@ const Reportes = () => {
     }).format(amount);
   };
   
-  // Función para cambiar tipo de reporte
   const cambiarTipoReporte = (tipo) => {
     setReporteActual(tipo);
     
-    // Actualizar URL sin recargar página
     const searchParams = new URLSearchParams();
     searchParams.set('tipo', tipo);
     searchParams.set('mes', periodoSeleccionado.mes);
@@ -78,16 +67,13 @@ const Reportes = () => {
       search: searchParams.toString()
     });
     
-    // Cargar nuevo reporte
     cargarReporte(tipo, periodoSeleccionado);
   };
   
-  // Función para cambiar periodo
   const cambiarPeriodo = (mes, anio) => {
     const nuevoPeriodo = { mes, anio };
     setPeriodoSeleccionado(nuevoPeriodo);
     
-    // Actualizar URL sin recargar página
     const searchParams = new URLSearchParams();
     searchParams.set('tipo', reporteActual);
     searchParams.set('mes', mes);
@@ -98,17 +84,14 @@ const Reportes = () => {
       search: searchParams.toString()
     });
     
-    // Cargar nuevo reporte
     cargarReporte(reporteActual, nuevoPeriodo);
   };
   
-  // Función para cargar el reporte
   const cargarReporte = async (tipo = reporteActual, periodo = periodoSeleccionado) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Obtener token de autenticación
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -124,7 +107,6 @@ const Reportes = () => {
       let url = '';
       let params = {};
       
-      // Construir URL y parámetros según el tipo de reporte
       switch (tipo) {
         case 'mensual':
           url = '/api/reportes/mensual';
@@ -159,7 +141,6 @@ const Reportes = () => {
           url = '/api/reportes/mensual';
       }
       
-      // Realizar solicitud al servidor
       const response = await axios.get(url, { 
         ...config, 
         params 
@@ -179,7 +160,6 @@ const Reportes = () => {
     }
   };
   
-  // Función para exportar a Excel
   const exportarAExcel = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -188,14 +168,12 @@ const Reportes = () => {
         throw new Error('No estás autenticado');
       }
       
-      // Construir URL para la exportación
       let url = `/api/reportes/exportar/${reporteActual}`;
       const params = {
         mes: periodoSeleccionado.mes,
         anio: periodoSeleccionado.anio
       };
       
-      // Configurar headers para descarga
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -204,23 +182,19 @@ const Reportes = () => {
         responseType: 'blob'
       };
       
-      // Realizar solicitud
       const response = await axios.get(url, config);
       
-      // Crear objeto URL para la descarga
       const blob = new Blob([response.data], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
       const downloadUrl = window.URL.createObjectURL(blob);
       
-      // Crear elemento para descarga y simular clic
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = `reporte_${reporteActual}_${periodoSeleccionado.anio}_${periodoSeleccionado.mes}.xlsx`;
       document.body.appendChild(a);
       a.click();
       
-      // Limpiar
       window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
       
@@ -246,19 +220,16 @@ const Reportes = () => {
     );
   }
 
-  // Componente para mostrar el reporte mensual
   const renderReporteMensual = () => {
     if (!reporteData) return null;
     
     return (
       <div className="space-y-6">
-        {/* Información del periodo */}
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold mb-2">
             Reporte de {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
           </h3>
           
-          {/* Métricas principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="text-gray-600 text-sm">Total Ventas</h4>
@@ -298,7 +269,6 @@ const Reportes = () => {
           </div>
         </div>
         
-        {/* Gráfico de ventas diarias */}
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold mb-4">Ventas Diarias</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -313,9 +283,7 @@ const Reportes = () => {
           </ResponsiveContainer>
         </div>
         
-        {/* Top productos y categorías */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Top Productos */}
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="text-lg font-semibold mb-4">Top Productos</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -330,7 +298,6 @@ const Reportes = () => {
             </ResponsiveContainer>
           </div>
           
-          {/* Ventas por Categoría */}
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="text-lg font-semibold mb-4">Ventas por Categoría</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -360,7 +327,6 @@ const Reportes = () => {
     );
   };
   
-  // Componente para mostrar el reporte de ventas
   const renderReporteVentas = () => {
     if (!reporteData) return null;
     
@@ -371,7 +337,6 @@ const Reportes = () => {
             Reporte de Ventas - {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
           </h3>
           
-          {/* Gráfico de ventas por día de la semana */}
           <div className="mt-6">
             <h4 className="text-md font-medium mb-2">Ventas por Día de la Semana</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -387,7 +352,6 @@ const Reportes = () => {
             </ResponsiveContainer>
           </div>
           
-          {/* Ventas por hora del día */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Ventas por Hora</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -404,7 +368,6 @@ const Reportes = () => {
             </ResponsiveContainer>
           </div>
           
-          {/* Métodos de pago */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Ventas por Método de Pago</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -454,7 +417,6 @@ const Reportes = () => {
     );
   };
   
-  // Componente para mostrar el reporte de productos
   const renderReporteProductos = () => {
     if (!reporteData) return null;
     
@@ -465,7 +427,6 @@ const Reportes = () => {
             Reporte de Productos - {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
           </h3>
           
-          {/* Top productos más vendidos */}
           <div className="mt-6">
             <h4 className="text-md font-medium mb-2">Productos más Vendidos</h4>
             <div className="overflow-x-auto">
@@ -492,7 +453,6 @@ const Reportes = () => {
             </div>
           </div>
           
-          {/* Productos por rentabilidad */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Productos por Rentabilidad</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -508,7 +468,6 @@ const Reportes = () => {
             </ResponsiveContainer>
           </div>
           
-          {/* Rotación de inventario */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Rotación de Inventario</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -543,7 +502,6 @@ const Reportes = () => {
     );
   };
   
-  // Componente para mostrar el reporte de clientes
   const renderReporteClientes = () => {
     if (!reporteData) return null;
     
@@ -554,7 +512,6 @@ const Reportes = () => {
             Reporte de Clientes - {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
           </h3>
           
-          {/* Métricas principales de clientes */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="text-gray-600 text-sm">Clientes Totales</h4>
@@ -575,7 +532,6 @@ const Reportes = () => {
             </div>
           </div>
           
-          {/* Top clientes */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Top Clientes por Compras</h4>
             <div className="overflow-x-auto">
@@ -604,7 +560,6 @@ const Reportes = () => {
             </div>
           </div>
           
-          {/* Frecuencia de compra */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Frecuencia de Compra</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -630,7 +585,6 @@ const Reportes = () => {
             </ResponsiveContainer>
           </div>
           
-          {/* Retención de clientes */}
           <div className="mt-8">
             <h4 className="text-md font-medium mb-2">Retención de Clientes</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -654,7 +608,6 @@ const Reportes = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">Reportes</h2>
         
-        {/* Filtros de periodo */}
         <div className="flex flex-wrap gap-2">
           <select
             className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -699,7 +652,6 @@ const Reportes = () => {
         </div>
       </div>
       
-      {/* Menú de navegación entre reportes */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="flex flex-wrap">
           <button
@@ -748,7 +700,6 @@ const Reportes = () => {
         </div>
       </div>
       
-      {/* Contenido del reporte según tipo seleccionado */}
       {reporteActual === 'mensual' && renderReporteMensual()}
       {reporteActual === 'ventas' && renderReporteVentas()}
       {reporteActual === 'productos' && renderReporteProductos()}

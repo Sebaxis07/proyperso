@@ -1,4 +1,3 @@
-// cliente/src/pages/OrderDetail.jsx
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -14,17 +13,14 @@ const OrderDetail = () => {
   const [error, setError] = useState(null);
   const pdfRef = useRef(null);
   
-  // Estado para la subida del comprobante
   const [comprobante, setComprobante] = useState('');
   const [subiendoComprobante, setSubiendoComprobante] = useState(false);
   const [errorComprobante, setErrorComprobante] = useState(null);
   const [comprobanteSubido, setComprobanteSubido] = useState(false);
   
-  // Estado para seguimiento de envío
   const [seguimiento, setSeguimiento] = useState(null);
   const [viewHistory, setViewHistory] = useState(false);
   
-  // Estado para feedback
   const [feedback, setFeedback] = useState({
     rating: 0,
     comentario: ''
@@ -50,7 +46,6 @@ const OrderDetail = () => {
         const res = await axios.get(`/api/pedidos/${id}`, config);
         setPedido(res.data.data);
         
-        // Simular información de seguimiento para pedidos enviados
         if (res.data.data.estadoPedido === 'enviado') {
           setSeguimiento({
             numeroSeguimiento: 'SP' + Math.floor(Math.random() * 10000000),
@@ -87,7 +82,6 @@ const OrderDetail = () => {
     }).format(price);
   };
 
-  // Formatear fecha
   const formatFecha = (fechaStr) => {
     if (!fechaStr) return 'Fecha no disponible';
     const fecha = new Date(fechaStr);
@@ -100,7 +94,6 @@ const OrderDetail = () => {
     });
   };
 
-  // Formatear fecha corta
   const formatFechaCorta = (fechaStr) => {
     if (!fechaStr) return '';
     const fecha = new Date(fechaStr);
@@ -112,13 +105,11 @@ const OrderDetail = () => {
     });
   };
 
-  // Manejar cambio en campo de comprobante
   const handleComprobanteChange = (e) => {
     setComprobante(e.target.value);
     setErrorComprobante(null);
   };
 
-  // Manejar subida de comprobante
   const handleSubirComprobante = async () => {
     if (!comprobante.trim()) {
       setErrorComprobante('Por favor ingresa la URL o número del comprobante');
@@ -144,7 +135,6 @@ const OrderDetail = () => {
         config
       );
 
-      // Actualizar el estado del pedido
       setPedido(prev => ({
         ...prev,
         comprobantePago: comprobante,
@@ -160,7 +150,6 @@ const OrderDetail = () => {
     }
   };
 
-  // Manejar cancelación de pedido
   const handleCancelarPedido = async () => {
     if (!window.confirm('¿Estás seguro de que deseas cancelar este pedido? Esta acción no se puede deshacer.')) {
       return;
@@ -179,7 +168,6 @@ const OrderDetail = () => {
 
       await axios.put(`/api/pedidos/${id}/cancelar`, {}, config);
 
-      // Actualizar el estado del pedido
       setPedido(prev => ({
         ...prev,
         estadoPedido: 'cancelado'
@@ -193,7 +181,6 @@ const OrderDetail = () => {
     }
   };
 
-  // Enviar valoración del pedido
   const handleSubmitFeedback = async () => {
     try {
       setLoading(true);
@@ -217,7 +204,6 @@ const OrderDetail = () => {
     }
   };
 
-  // Actualizar estado de feedback
   const handleFeedbackChange = (e) => {
     const { name, value } = e.target;
     setFeedback({
@@ -226,7 +212,6 @@ const OrderDetail = () => {
     });
   };
 
-  // Actualizar rating
   const handleRatingChange = (rating) => {
     setFeedback({
       ...feedback,
@@ -234,7 +219,6 @@ const OrderDetail = () => {
     });
   };
 
-  // Obtener el color y texto del estado de pedido
   const getEstadoPedidoInfo = (estado) => {
     const estados = {
       pendiente: { 
@@ -287,7 +271,6 @@ const OrderDetail = () => {
     return estados[estado] || { color: 'gray', text: estado };
   };
 
-  // Obtener el color y texto del estado de pago
   const getEstadoPagoInfo = (estado) => {
     const estados = {
       pendiente: { 
@@ -322,7 +305,6 @@ const OrderDetail = () => {
     return estados[estado] || { color: 'gray', text: estado };
   };
 
-  // Obtener los pasos de progreso del pedido
   const getProgresoSteps = () => {
     const steps = [
       { id: 'pendiente', title: 'Pendiente', description: 'Pedido recibido' },
@@ -339,16 +321,13 @@ const OrderDetail = () => {
     return { steps, currentStepIndex, isCompleted, isCancelled };
   };
 
-  // Generar PDF mejorado con jsPDF (este método generará un PDF mucho más profesional)
   const generatePDF = async () => {
     try {
-      // Crear instancia PDF
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
-      let yPos = 20; // Posición inicial Y
+      let yPos = 20; 
       const margin = 10;
   
-      // Agregar logo y título
       doc.setFont("helvetica", "bold");
       doc.setFontSize(20);
       doc.setTextColor("#222");
@@ -360,7 +339,6 @@ const OrderDetail = () => {
       
       yPos += 15;
       
-      // Agregar detalles del pedido
       doc.setFontSize(16);
       doc.setTextColor("#222");
       doc.text(`Detalles del Pedido #${pedido.numeroPedido || id.substring(0, 8)}`, margin, yPos);
@@ -373,7 +351,6 @@ const OrderDetail = () => {
       
       yPos += 6;
       
-      // Estado del pedido
       const estadoPedidoInfo = getEstadoPedidoInfo(pedido.estadoPedido);
       const estadoPagoInfo = getEstadoPagoInfo(pedido.estadoPago);
       
@@ -385,7 +362,6 @@ const OrderDetail = () => {
       
       yPos += 15;
       
-      // Información de envío
       doc.setFontSize(14);
       doc.setTextColor("#222");
       doc.text("Dirección de Envío", margin, yPos);
@@ -411,7 +387,6 @@ const OrderDetail = () => {
       
       yPos += 15;
       
-      // Método de pago
       doc.setFontSize(14);
       doc.setTextColor("#222");
       doc.text("Método de Pago", margin, yPos);
@@ -429,14 +404,12 @@ const OrderDetail = () => {
       
       yPos += 15;
       
-      // Tabla de productos
       doc.setFontSize(14);
       doc.setTextColor("#222");
       doc.text("Productos", margin, yPos);
       
       yPos += 10;
       
-      // Crear datos para la tabla
       const tableHeaders = [['Producto', 'Precio', 'Cantidad', 'Subtotal']];
       const tableData = pedido.productos.map((item) => [
         item.producto?.nombre || "Producto eliminado",
@@ -445,7 +418,6 @@ const OrderDetail = () => {
         formatPrice(item.subtotal)
       ]);
       
-      // Usar autoTable de manera correcta
       doc.autoTable({
         startY: yPos,
         head: tableHeaders,
@@ -459,10 +431,8 @@ const OrderDetail = () => {
         margin: { left: margin, right: margin }
       });
       
-      // Obtener la posición Y después de la tabla
       yPos = doc.lastAutoTable.finalY + 10;
       
-      // Tabla de totales
       const totalesData = [
         ['Subtotal', formatPrice(pedido.subtotal)],
         ['Envío', pedido.costoEnvio === 0 ? "GRATIS" : formatPrice(pedido.costoEnvio)],
@@ -482,7 +452,6 @@ const OrderDetail = () => {
         margin: { left: pageWidth - 110, right: margin }
       });
       
-      // Agregar pie de página
       const pageCount = doc.internal.getNumberOfPages();
       doc.setFontSize(8);
       doc.setTextColor(150);
@@ -497,18 +466,14 @@ const OrderDetail = () => {
         );
       }
       
-      // Guardar el PDF
       doc.save(`Pedido-${pedido.numeroPedido || id.substring(0, 8)}.pdf`);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       
-      // En caso de error con autoTable, intentar con el método de captura alternativo
-      console.log('Intentando método alternativo de generación de PDF...');
       generateScreenshotPDF();
     }
   };
 
-  // Versión alternativa usando HTML2Canvas para capturar el diseño exacto
   const generateScreenshotPDF = async () => {
     try {
       const element = document.getElementById('order-detail');
@@ -520,8 +485,8 @@ const OrderDetail = () => {
         backgroundColor: '#ffffff'
       });
       
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
+      const imgWidth = 210; 
+      const pageHeight = 297; 
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -615,7 +580,6 @@ const OrderDetail = () => {
   return (
     <div className="bg-gray-50 min-h-screen py-10">
       <div className="max-w-6xl mx-auto px-4">
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -654,7 +618,6 @@ const OrderDetail = () => {
           </div>
         </div>
 
-        {/* Barra de progreso del pedido */}
         {!isCancelled && (
           <div className="bg-white rounded-2xl shadow-md overflow-hidden mb-8 p-8">
             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -665,7 +628,6 @@ const OrderDetail = () => {
             </h2>
             
             <div className="relative">
-              {/* Línea de conexión */}
               <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-gray-200">
                 <div 
                   className={`h-full bg-[#FFD15C] transition-all duration-500`} 
@@ -677,7 +639,6 @@ const OrderDetail = () => {
                 ></div>
               </div>
               
-              {/* Steps */}
               <div className="relative flex justify-between">
                 {steps.map((step, index) => {
                   const isActive = index <= currentStepIndex;
@@ -705,7 +666,6 @@ const OrderDetail = () => {
                           )}
                         </div>
                         
-                        {/* Label */}
                         <div className="mt-3">
                           <p className={`font-semibold ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
                             {step.title}
@@ -721,7 +681,6 @@ const OrderDetail = () => {
               </div>
             </div>
             
-            {/* Información de seguimiento si está disponible */}
             {seguimiento && (
               <div className="mt-10 pt-6 border-t border-gray-100">
                 <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -768,7 +727,6 @@ const OrderDetail = () => {
                   </div>
                 </div>
                 
-                {/* Historia de seguimiento desplegable */}
                 {seguimiento.historia && seguimiento.historia.length > 0 && (
                   <div className="mt-6">
                     <button
@@ -803,11 +761,8 @@ const OrderDetail = () => {
           </div>
         )}
 
-        {/* Main Content */}
         <div id="order-detail" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Columna izquierda: Detalles del pedido y productos */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Estado en caso de cancelación */}
             {isCancelled && (
               <div className="bg-red-50 border border-red-100 rounded-2xl shadow-sm p-6">
                 <div className="flex items-center gap-4">
@@ -824,7 +779,6 @@ const OrderDetail = () => {
               </div>
             )}
             
-            {/* Productos */}
             <div className="bg-white rounded-2xl shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -897,7 +851,6 @@ const OrderDetail = () => {
               </div>
             </div>
             
-            {/* Sistema de valoración si el pedido está entregado */}
             {pedido.estadoPedido === 'entregado' && !feedbackSubmitted && (
               <div className="bg-white rounded-2xl shadow-md overflow-hidden p-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -954,7 +907,6 @@ const OrderDetail = () => {
               </div>
             )}
             
-            {/* Mostrar valoración enviada */}
             {feedbackSubmitted && (
               <div className="bg-green-50 rounded-2xl shadow-sm overflow-hidden p-6">
                 <div className="flex items-center gap-4">
@@ -971,7 +923,6 @@ const OrderDetail = () => {
               </div>
             )}
             
-            {/* Acciones del pedido */}
             {['pendiente', 'procesando'].includes(pedido.estadoPedido) && (
               <div className="bg-white rounded-2xl shadow-md overflow-hidden p-6">
                 <h2 className="text-lg font-bold text-gray-800 mb-4">Acciones</h2>
@@ -989,9 +940,7 @@ const OrderDetail = () => {
             )}
           </div>
           
-          {/* Columna derecha: Resumen y detalles */}
           <div className="lg:col-span-1 space-y-8">
-            {/* Resumen del pedido */}
             <div className="bg-white rounded-2xl shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -1042,7 +991,6 @@ const OrderDetail = () => {
               </div>
             </div>
             
-            {/* Información de envío */}
             <div className="bg-white rounded-2xl shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -1069,7 +1017,6 @@ const OrderDetail = () => {
               </div>
             </div>
             
-            {/* Método de pago */}
             <div className="bg-white rounded-2xl shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -1114,7 +1061,6 @@ const OrderDetail = () => {
                   </div>
                 </div>
                 
-                {/* Datos para transferencia bancaria */}
                 {pedido?.metodoPago === 'transferencia' && (pedido.estadoPago === 'pendiente') && (
                   <div className="mt-4 bg-blue-50 rounded-lg p-4 text-sm">
                     <h4 className="font-semibold text-blue-800 mb-2">Datos bancarios:</h4>
@@ -1187,7 +1133,6 @@ const OrderDetail = () => {
               </div>
             </div>
             
-            {/* Información de contacto */}
             <div className="bg-white rounded-2xl shadow-md overflow-hidden">
               <div className="p-6 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">

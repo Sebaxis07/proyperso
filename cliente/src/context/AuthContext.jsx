@@ -1,4 +1,3 @@
-// cliente/src/context/AuthContext.jsx
 import { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -13,7 +12,6 @@ const AuthProvider = ({ children }) => {
     checkUserLoggedIn();
   }, []);
 
-  // Verificar si hay un usuario con sesión activa
   const checkUserLoggedIn = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -41,7 +39,6 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Registrar usuario
   const register = async (userData) => {
     try {
       setLoading(true);
@@ -65,7 +62,6 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Iniciar sesión
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -90,13 +86,11 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Cerrar sesión
   const logout = () => {
     localStorage.removeItem('token');
     setCurrentUser(null);
   };
 
-  // Actualizar perfil
   const updateProfile = async (userData) => {
     try {
       setLoading(true);

@@ -1,4 +1,3 @@
-// cliente/src/pages/Products.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -9,7 +8,6 @@ const Products = () => {
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   
-  // Estados
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +16,6 @@ const Products = () => {
     totalPages: 1
   });
   
-  // Filtros
   const [filtros, setFiltros] = useState({
     categoria: queryParams.get('categoria') || '',
     tipoMascota: queryParams.get('tipoMascota') || '',
@@ -31,7 +28,6 @@ const Products = () => {
     limit: parseInt(queryParams.get('limit') || '12')
   });
   
-  // Opciones para filtros
   const categorias = [
     { id: 'alimentos', nombre: 'Alimentos' },
     { id: 'accesorios', nombre: 'Accesorios' },
@@ -58,13 +54,11 @@ const Products = () => {
     { id: '', nombre: 'Más Recientes' }
   ];
   
-  // Efecto para cargar productos
   useEffect(() => {
     const fetchProductos = async () => {
       try {
         setLoading(true);
         
-        // Construir query string con los filtros
         const params = new URLSearchParams();
         if (filtros.categoria) params.append('categoria', filtros.categoria);
         if (filtros.tipoMascota) params.append('tipoMascota', filtros.tipoMascota);
@@ -76,7 +70,6 @@ const Products = () => {
         params.append('page', filtros.page);
         params.append('limit', filtros.limit);
         
-        // Actualizar URL con los parámetros de filtro
         navigate({
           pathname: location.pathname,
           search: params.toString()
@@ -101,27 +94,24 @@ const Products = () => {
     fetchProductos();
   }, [filtros, location.pathname, navigate]);
   
-  // Manejar cambios en filtros
   const handleFiltroChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Para checkboxes (destacado, enOferta)
     if (type === 'checkbox') {
       setFiltros({
         ...filtros,
         [name]: checked ? 'true' : '',
-        page: 1 // Resetear página al cambiar filtros
+        page: 1
       });
     } else {
       setFiltros({
         ...filtros,
         [name]: value,
-        page: 1 // Resetear página al cambiar filtros
+        page: 1 
       });
     }
   };
   
-  // Limpiar todos los filtros
   const handleLimpiarFiltros = () => {
     setFiltros({
       categoria: '',
@@ -136,21 +126,18 @@ const Products = () => {
     });
   };
   
-  // Cambiar página
   const handlePageChange = (page) => {
     setFiltros({
       ...filtros,
       page
     });
     
-    // Scroll al inicio de los resultados
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
   };
   
-  // Generar paginación
   const renderPagination = () => {
     const pages = [];
     const maxPagesToShow = 5;
@@ -158,12 +145,10 @@ const Products = () => {
     let startPage = Math.max(1, pagination.currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(pagination.totalPages, startPage + maxPagesToShow - 1);
     
-    // Ajustar startPage si endPage está limitado
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
     
-    // Botón de página anterior
     pages.push(
       <button
         key="prev"
@@ -175,7 +160,6 @@ const Products = () => {
       </button>
     );
     
-    // Páginas
     for (let i = startPage; i <= endPage; i++) {
       pages.push(
         <button
@@ -192,7 +176,6 @@ const Products = () => {
       );
     }
     
-    // Botón de página siguiente
     pages.push(
       <button
         key="next"
@@ -209,7 +192,6 @@ const Products = () => {
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-      {/* Filtros (lateral) */}
       <div className="lg:col-span-1">
         <div className="bg-white shadow-xl rounded-2xl p-8 sticky top-6 animate-fadeIn">
           <div className="flex justify-between items-center mb-8">
@@ -230,7 +212,6 @@ const Products = () => {
             </button>
           </div>
   
-          {/* Categoría */}
           <div className="mb-8">
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,7 +234,6 @@ const Products = () => {
             </select>
           </div>
   
-          {/* Tipo de Mascota */}
           <div className="mb-8">
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -276,7 +256,6 @@ const Products = () => {
             </select>
           </div>
   
-          {/* Rango de Precio */}
           <div className="mb-8">
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,7 +287,6 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Marca */}
           <div className="mb-8">
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -323,14 +301,12 @@ const Products = () => {
               className="form-input w-full rounded-lg border-gray-300 focus:border-[#FFD15C] focus:ring-[#FFD15C] transition"
             >
               <option value="">Todas las marcas</option>
-              {/* Aquí deberías cargar las marcas desde tu base de datos */}
               <option value="marca1">Marca 1</option>
               <option value="marca2">Marca 2</option>
               <option value="marca3">Marca 3</option>
             </select>
           </div>
   
-          {/* Descuento */}
           <div className="mb-8">
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -352,7 +328,6 @@ const Products = () => {
             </select>
           </div>
   
-          {/* Opciones adicionales */}
           <div>
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -388,9 +363,7 @@ const Products = () => {
         </div>
       </div>
       
-      {/* Listado de productos */}
       <div className="lg:col-span-3">
-        {/* Cabecera: ordenamiento y cantidad */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <h1 className="text-2xl font-bold mb-4 sm:mb-0 flex items-center gap-2">
             <svg className="w-7 h-7 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -421,7 +394,6 @@ const Products = () => {
           </div>
         </div>
         
-        {/* Mensajes de estado */}
         {loading ? (
           <div className="flex justify-center items-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FFD15C]"></div>
@@ -446,7 +418,6 @@ const Products = () => {
           </div>
         ) : (
           <>
-            {/* Grid de productos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
               {productos.map((producto) => (
                 <div key={producto._id} className="animate-fadeIn">
@@ -455,7 +426,6 @@ const Products = () => {
               ))}
             </div>
             
-            {/* Paginación */}
             {pagination.totalPages > 1 && (
               <div className="flex justify-center mt-8">
                 <div className="inline-flex space-x-1">

@@ -1,4 +1,3 @@
-// cliente/src/components/routing/PrivateRoute.jsx
 import { useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -6,7 +5,6 @@ import { AuthContext } from '../../context/AuthContext';
 const PrivateRoute = ({ children }) => {
   const { currentUser, loading } = useContext(AuthContext);
 
-  // Si está cargando, mostrar spinner
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -14,13 +12,10 @@ const PrivateRoute = ({ children }) => {
       </div>
     );
   }
-
-  // Si no hay usuario autenticado, redirigir al login
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si hay usuario autenticado, renderizar los hijos
   return children;
 };
 

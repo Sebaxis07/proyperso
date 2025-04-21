@@ -1,4 +1,3 @@
-// cliente/src/pages/Login.jsx
 import { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -7,14 +6,12 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, currentUser, error } = useContext(AuthContext);
 
-  // Si el usuario ya está autenticado, redirigir a la página principal
   useEffect(() => {
     if (currentUser) {
       navigate('/');
     }
   }, [currentUser, navigate]);
 
-  // Estados para el formulario
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -23,10 +20,8 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Destructuring de formData
   const { email, password } = formData;
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -35,18 +30,15 @@ const Login = () => {
     });
   };
 
-  // Validar el formulario
   const validateForm = () => {
     const errors = {};
 
-    // Validar email
     if (!email) {
       errors.email = 'Por favor ingresa tu email';
     } else if (!/^\S+@\S+\.\S+$/.test(email)) {
       errors.email = 'Email inválido';
     }
 
-    // Validar contraseña
     if (!password) {
       errors.password = 'Por favor ingresa tu contraseña';
     }
@@ -55,7 +47,6 @@ const Login = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Manejar envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -63,15 +54,12 @@ const Login = () => {
       setIsSubmitting(true);
       try {
         await login(email, password);
-        // Si llega aquí, el login fue exitoso y el contexto redirigirá
       } catch (err) {
         setIsSubmitting(false);
-        // El error ya se maneja en el contexto
       }
     }
   };
 
-  // Alternar visibilidad de la contraseña
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -101,7 +89,6 @@ const Login = () => {
         
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-5 rounded-md">
-            {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -132,7 +119,6 @@ const Login = () => {
               )}
             </div>
 
-            {/* Contraseña */}
             <div>
               <div className="flex justify-between">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">

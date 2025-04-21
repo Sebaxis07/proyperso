@@ -4,14 +4,12 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api';
 
-// Estilos y configuración del mapa
 const mapContainerStyle = {
   width: '100%',
   height: '400px',
-  borderRadius: '1.5rem' // Más redondeado
+  borderRadius: '1.5rem' 
 };
 
-// Coordenadas de Av. Edmundo Pérez Zujovic 11092, Antofagasta, Chile
 const center = {
   lat: -23.5737, 
   lng: -70.3850
@@ -20,7 +18,7 @@ const center = {
 const options = {
   disableDefaultUI: false,
   zoomControl: true,
-  scrollwheel: false, // Deshabilitar scroll en el mapa
+  scrollwheel: false, 
 };
 
 const Contacto = () => {
@@ -51,7 +49,6 @@ const Contacto = () => {
     setError('');
     
     try {
-      // Validaciones básicas
       if (!formData.nombre || !formData.email || !formData.mensaje) {
         throw new Error('Por favor completa todos los campos obligatorios.');
       }
@@ -60,13 +57,10 @@ const Contacto = () => {
         throw new Error('Por favor ingresa un correo electrónico válido.');
       }
       
-      // Enviar datos a la API
       await axios.post('/api/contacto', formData);
       
-      // Mostrar mensaje de éxito
       setSuccess(true);
       
-      // Limpiar formulario
       setFormData({
         nombre: '',
         email: '',
@@ -94,7 +88,6 @@ const Contacto = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Hero Section */}
       <section className="bg-gradient-to-r from-[#FFD15C] to-[#FFC132] py-24">
         <div className="container mx-auto px-4 text-center">
           <motion.h1
@@ -116,7 +109,6 @@ const Contacto = () => {
         </div>
       </section>
 
-      {/* Información de Contacto */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <motion.div
@@ -153,11 +145,9 @@ const Contacto = () => {
         </div>
       </section>
 
-      {/* Mapa y Formulario */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row gap-12">
-            {/* Mapa */}
             <motion.div 
               className="lg:w-1/2"
               initial={{ opacity: 0, x: -30 }}
@@ -233,7 +223,6 @@ const Contacto = () => {
               </motion.div>
             </motion.div>
             
-            {/* Formulario */}
             <motion.div 
               className="lg:w-1/2"
               initial={{ opacity: 0, x: 30 }}
@@ -377,7 +366,6 @@ const Contacto = () => {
         </div>
       </section>
 
-      {/* Preguntas Frecuentes */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <motion.h2
@@ -422,7 +410,6 @@ const Contacto = () => {
   );
 };
 
-// Componentes auxiliares
 const ContactCard = ({ icon, title, details }) => (
   <motion.div 
     whileHover={{ scale: 1.05, y: -5 }}

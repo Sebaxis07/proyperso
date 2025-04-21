@@ -16,23 +16,19 @@ const Nosotros = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // Cargar testimonios reales desde la base de datos
   useEffect(() => {
     const fetchTestimonios = async () => {
       try {
         setLoading(true);
         
-        // Obtener el token de autenticación del almacenamiento local o del contexto
-        const token = localStorage.getItem('authToken'); // Ajusta esto según cómo manejes el token
+        const token = localStorage.getItem('authToken'); 
         
-        // Configurar headers con el token
         const config = {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         };
         
-        // Enviar la solicitud con los headers de autenticación
         const response = await axios.get('/api/testimonios', config);
         setTestimonios(response.data);
         setLoading(false);
@@ -45,7 +41,6 @@ const Nosotros = () => {
     fetchTestimonios();
   }, []);
   
-  // Manejar cambios en el formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -54,7 +49,6 @@ const Nosotros = () => {
     }));
   };
   
-  // Modificar la función handleSubmit para incluir el token de autenticación
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -67,24 +61,20 @@ const Nosotros = () => {
     try {
       setLoading(true);
       
-      // Obtener el token de autenticación del almacenamiento local o del contexto
-      const token = localStorage.getItem('authToken'); // Ajusta esto según cómo manejes el token
+      const token = localStorage.getItem('authToken');
       
-      // Verificar si el token existe y no está vacío
       if (!token) {
         setError('No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
         setLoading(false);
         return;
       }
       
-      // Configurar headers con el token
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       };
       
-      // Enviar la solicitud con los headers de autenticación
       await axios.post('/api/testimonios', {
         ...formData,
         usuarioId: currentUser.id,
@@ -92,25 +82,19 @@ const Nosotros = () => {
         fecha: new Date()
       }, config);
       
-      // Recargar testimonios para mostrar el nuevo
       const response = await axios.get('/api/testimonios', config);
       setTestimonios(response.data);
       
-      // Resetear formulario y mostrar mensaje de éxito
       setFormData({ texto: '', calificacion: 5 });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 5000);
       
     } catch (err) {
-      // Manejar diferentes tipos de errores
       if (err.response) {
-        // El servidor respondió con un código de error
         setError(err.response.data.message || 'Error al enviar tu testimonio. Por favor, intenta nuevamente.');
       } else if (err.request) {
-        // La solicitud se hizo pero no se recibió respuesta
         setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
       } else {
-        // Error al configurar la solicitud
         setError('Error al enviar tu testimonio. Por favor, intenta nuevamente.');
       }
       console.error('Error:', err);
@@ -121,19 +105,16 @@ const Nosotros = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section - Professional & Modern */}
       <section className="relative h-[85vh] bg-white overflow-hidden">
         <div className="absolute inset-0 bg-[#FFD15C]/10">
           <div className="absolute inset-0 bg-[url('/src/assets/pattern-light.png')] opacity-30"></div>
         </div>
         
-        {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-1/3 h-full bg-[#FFD15C]/5 -skew-x-12 transform origin-top"></div>
         <div className="absolute top-0 right-0 w-1/4 h-full bg-[#FFD15C]/10 -skew-x-12 transform origin-top"></div>
         
         <div className="container mx-auto px-4 h-full flex items-center relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
-            {/* Content Left */}
             <motion.div 
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -175,7 +156,6 @@ const Nosotros = () => {
                 </motion.button>
               </div>
 
-              {/* Stats */}
               <div className="grid grid-cols-3 gap-8 mt-12 pt-12 border-t border-gray-100">
                 <div>
                   <span className="block text-3xl font-bold text-[#FFD15C]">15k+</span>
@@ -192,7 +172,6 @@ const Nosotros = () => {
               </div>
             </motion.div>
 
-            {/* Image Right */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -207,7 +186,6 @@ const Nosotros = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                 
-                {/* Floating Card */}
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -231,9 +209,7 @@ const Nosotros = () => {
         </div>
       </section>
 
-      {/* Historia Section - Modern and Dynamic */}
       
-      {/* Historia Section - Elegant */}
       <section className="py-32 bg-white relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-20 items-center">
@@ -296,7 +272,6 @@ const Nosotros = () => {
         </div>
       </section>
 
-      {/* Valores Section - Enhanced */}
       <section className="py-24 bg-gray-50 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/path/to/pattern.png')] opacity-5"></div>
         <div className="container mx-auto px-4 relative z-10">
@@ -334,7 +309,6 @@ const Nosotros = () => {
         </div>
       </section>
 
-      {/* Estadísticas Reales Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Lucky Pet Shop en Números</h2>
@@ -347,7 +321,6 @@ const Nosotros = () => {
         </div>
       </section>
 
-      {/* Testimonios Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-4">Lo Que Dicen Nuestros Clientes</h2>
@@ -414,7 +387,6 @@ const Nosotros = () => {
             </p>
           )}
           
-          {/* Formulario para dejar testimonio (solo para usuarios logueados) */}
           {currentUser && (
             <div className="max-w-3xl mx-auto mt-16 bg-white rounded-xl shadow-lg p-8">
               <h3 className="text-2xl font-bold mb-6">Comparte tu Experiencia</h3>
@@ -486,7 +458,6 @@ const Nosotros = () => {
         </div>
       </section>
 
-      {/* Certificaciones Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Nuestras Certificaciones</h2>
@@ -510,7 +481,6 @@ const Nosotros = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-16 bg-[#FFF8E7]">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-6">Únete a Nuestra Comunidad</h2>
@@ -537,7 +507,6 @@ const Nosotros = () => {
   );
 };
 
-// Enhanced auxiliary components
 const ValorCard = ({ icon, title, description }) => (
   <motion.div 
     whileHover={{ y: -8, scale: 1.02 }}

@@ -1,7 +1,6 @@
-// cliente/src/pages/Home.jsx
 import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion'; // Necesitarás instalar framer-motion
+import { motion } from 'framer-motion'; 
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageUtils';
@@ -23,7 +22,6 @@ const Home = () => {
         console.log("Datos de productos destacados:", resDestacados.data.data);
         setDestacados(resDestacados.data.data);
 
-        // Obtener productos en oferta
         const resOfertas = await axios.get('/api/productos?enOferta=true&limit=4');
         console.log("Datos de productos en oferta:", resOfertas.data.data);
         setOfertas(resOfertas.data.data);
@@ -39,7 +37,6 @@ const Home = () => {
     fetchProducts();
   }, []);
 
-  // Secciones de categorías populares
   const categorias = [
     {
       id: 'alimentos',
@@ -67,7 +64,6 @@ const Home = () => {
     }
   ];
 
-  // Secciones de tipos de mascotas
   const tiposMascotas = [
     { id: 'perro', nombre: 'Perros', imagen: 'src/img/perro.webp' },
     { id: 'gato', nombre: 'Gatos', imagen: 'src/img/gatos.avif' },
@@ -83,9 +79,7 @@ const Home = () => {
     transition: { duration: 0.6 }
   };
 
-  // Componente ProductCard personalizado para usar dentro del Home
   const CustomProductCard = ({ producto }) => {
-    // Formatear precio como moneda chilena
     const formatPrice = (price) => {
       return new Intl.NumberFormat('es-CL', {
         style: 'currency',
@@ -93,7 +87,6 @@ const Home = () => {
       }).format(price);
     };
 
-    // Calcular precio con descuento si está en oferta
     const precioFinal = producto.enOferta 
       ? producto.precio * (1 - producto.descuento / 100) 
       : producto.precio;
@@ -159,7 +152,6 @@ const Home = () => {
 
   return (
     <div className="bg-gray-50">
-      {/* Hero Section Mejorado */}
       <motion.section 
         className="relative min-h-[600px] bg-gradient-to-r from-[#FFD15C] to-[#FFA51C] text-gray-800 py-20 mb-12 rounded-2xl overflow-hidden"
         initial={{ opacity: 0 }}
@@ -218,7 +210,6 @@ const Home = () => {
           </motion.div>
         </div>
 
-        {/* Decorative shapes */}
         <div className="absolute left-0 bottom-0 opacity-10">
           <svg className="w-64 h-64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
             <path fill="currentColor" d="M140.5,59.5c14.3,5.4,30.2,10.8,38,22.1c7.8,11.3,7.5,28.3,1.1,41.9c-6.4,13.6-19,23.8-33.2,28.9c-14.2,5.1-30,5.1-45.9,0.7c-15.9-4.4-31.9-13.2-40.3-27.6c-8.4-14.3-9.3-34.3-1.4-47.8c7.9-13.5,24.5-20.6,40.2-26.1c15.6-5.5,30.2-9.5,44.5-4.1C143.5,47.4,126.2,54.1,140.5,59.5z" />
@@ -226,7 +217,6 @@ const Home = () => {
         </div>
       </motion.section>
 
-      {/* Categorías Populares Mejoradas */}
       <motion.section 
         className="container mx-auto px-4 mb-20"
         {...fadeIn}
@@ -288,7 +278,6 @@ const Home = () => {
         </div>
       </motion.section>
 
-      {/* Tipos de Mascotas */}
       <section className="mb-16">
         <h2 className="text-2xl md:text-3xl font-bold mb-6">Tienda por Tipo de Mascota</h2>
         
@@ -316,7 +305,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Productos Destacados */}
       <section className="mb-16">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl md:text-3xl font-bold">Productos Destacados</h2>
@@ -348,7 +336,6 @@ const Home = () => {
         )}
       </section>
 
-      {/* Ofertas Especiales */}
       <section className="mb-16">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl md:text-3xl font-bold">Ofertas Especiales</h2>
@@ -379,7 +366,6 @@ const Home = () => {
           </div>
         )}
       </section>
-      {/* Sección condicional de usuario */}
       {currentUser ? (
         <motion.section 
           className="bg-gradient-to-r from-[#FFD15C] to-[#FFA51C] text-white rounded-2xl p-8 mb-16 overflow-hidden relative"

@@ -1,4 +1,3 @@
-// cliente/src/pages/Checkout.jsx
 import { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -10,14 +9,12 @@ const Checkout = () => {
   const { cart, clearCart } = useContext(CartContext);
   const { currentUser } = useContext(AuthContext);
   
-  // Si no hay productos en el carrito, redirigir
   useEffect(() => {
     if (cart.length === 0) {
       navigate('/carrito');
     }
   }, [cart, navigate]);
 
-  // Estados del formulario
   const [formData, setFormData] = useState({
     direccionEnvio: {
       calle: currentUser?.direccion?.calle || '',
@@ -37,35 +34,27 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [ordenCreada, setOrdenCreada] = useState(null);
-  const [etapa, setEtapa] = useState(1); // 1: Dirección, 2: Método de Pago, 3: Confirmación
-
-  // Función para calcular precio con descuento
+  const [etapa, setEtapa] = useState(1); 
   const getDiscountedPrice = (item) => {
-    // Caso 1: Si tiene oferta y descuento como propiedades
     if (item.oferta && item.descuento) {
       return item.precio - (item.precio * (item.descuento / 100));
     }
     
-    // Caso 2: Si tiene directamente precioOferta
     if (item.precioOferta) {
       return item.precioOferta;
     }
     
-    // Caso 3: Si tiene descuentoActivo y porcentajeDescuento
     if (item.descuentoActivo && item.porcentajeDescuento) {
       return item.precio - (item.precio * (item.porcentajeDescuento / 100));
     }
     
-    // Caso 4: Si tiene enOferta y descuento
     if (item.enOferta && item.descuento) {
       return item.precio - (item.precio * (item.descuento / 100));
     }
     
-    // Por defecto, devolver precio original
     return item.precio;
   };
 
-  // Verificar si un producto tiene algún tipo de descuento
   const hasDiscount = (item) => {
     return (
       (item.oferta && item.descuento) || 
@@ -75,24 +64,18 @@ const Checkout = () => {
     );
   };
 
-  // Calcular totales
   const calcularTotales = () => {
-    // Subtotal sin descuentos
     const subtotalOriginal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     
-    // Subtotal con descuentos aplicados
     const subtotalConDescuentos = cart.reduce((sum, item) => {
       const precioConDescuento = getDiscountedPrice(item);
       return sum + (precioConDescuento * item.cantidad);
     }, 0);
     
-    // Ahorro total por descuentos
     const ahorroTotal = subtotalOriginal - subtotalConDescuentos;
     
-    // Costo de envío (gratis para compras mayores a $30.000)
     const costoEnvio = subtotalConDescuentos > 30000 ? 0 : 3990;
     
-    // Total final con envío incluido
     const totalFinal = subtotalConDescuentos + costoEnvio;
     
     return {
@@ -106,7 +89,6 @@ const Checkout = () => {
 
   const totales = calcularTotales();
 
-  // Formatear precio como moneda chilena
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -114,7 +96,6 @@ const Checkout = () => {
     }).format(price);
   };
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
@@ -127,7 +108,6 @@ const Checkout = () => {
     }
     
     if (name.includes('.')) {
-      // Manejar cambios en campos anidados (dirección)
       const [parent, child] = name.split('.');
       setFormData({
         ...formData,
@@ -137,7 +117,6 @@ const Checkout = () => {
         }
       });
     } else {
-      // Manejar cambios en campos normales
       setFormData({
         ...formData,
         [name]: value
@@ -145,11 +124,9 @@ const Checkout = () => {
     }
   };
 
-  // Validar el formulario
   const validateForm = () => {
     const errors = {};
 
-    // Validar campos obligatorios de dirección
     if (!formData.direccionEnvio.calle.trim()) {
       errors['direccionEnvio.calle'] = 'La calle es obligatoria';
     }
@@ -170,7 +147,6 @@ const Checkout = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Avanzar a la siguiente etapa
   const siguienteEtapa = () => {
     if (etapa === 1 && validateForm()) {
       setEtapa(2);
@@ -179,14 +155,12 @@ const Checkout = () => {
     }
   };
 
-  // Regresar a la etapa anterior
   const etapaAnterior = () => {
     if (etapa > 1) {
       setEtapa(etapa - 1);
     }
   };
 
-  // Manejar envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -201,7 +175,6 @@ const Checkout = () => {
           throw new Error('No estás autenticado');
         }
 
-        // Verificar si hay items en el carrito
         if (cart.length === 0) {
           throw new Error('No hay productos en el carrito');
         }
@@ -213,17 +186,15 @@ const Checkout = () => {
           }
         };
 
-        // Preparar productos con precios correctos (con descuentos aplicados)
         const productosConPreciosCorrectos = cart.map(item => ({
           producto: item._id,
           cantidad: item.cantidad,
-          precioUnitario: getDiscountedPrice(item), // Precio con descuento si aplica
-          precioOriginal: item.precio, // Precio original para referencia
+          precioUnitario: getDiscountedPrice(item), 
+          precioOriginal: item.precio, 
           nombre: item.nombre,
-          descuento: hasDiscount(item) ? (item.descuento || 0) : 0 // Porcentaje de descuento
+          descuento: hasDiscount(item) ? (item.descuento || 0) : 0 
         }));
 
-        // Modificación en la preparación de datos
         const pedidoData = {
           productos: productosConPreciosCorrectos,
           direccionEnvio: formData.direccionEnvio,
@@ -255,7 +226,6 @@ const Checkout = () => {
     }
   };
 
-  // Si ya se creó la orden, mostrar página de confirmación
   if (ordenCreada) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-12 animate-fadeIn">
@@ -320,7 +290,6 @@ const Checkout = () => {
         Finalizar Compra
       </h1>
       
-      {/* Barra de progreso */}
       <div className="mb-12">
         <div className="flex justify-between items-center">
           <div className={`flex flex-col items-center ${etapa >= 1 ? 'text-[#FFD15C]' : 'text-gray-400'}`}>
@@ -362,10 +331,8 @@ const Checkout = () => {
       )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Formulario de checkout */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="bg-white shadow-lg rounded-2xl overflow-hidden">
-            {/* Dirección de envío */}
             {etapa === 1 && (
               <div className="p-8">
                 <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
@@ -377,7 +344,6 @@ const Checkout = () => {
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  {/* Calle */}
                   <div>
                     <label htmlFor="direccionEnvio.calle" className="block text-sm font-medium text-gray-700 mb-1">
                       Calle <span className="text-red-500">*</span>
@@ -394,7 +360,6 @@ const Checkout = () => {
                     {formErrors['direccionEnvio.calle'] && <p className="mt-1 text-sm text-red-500">{formErrors['direccionEnvio.calle']}</p>}
                   </div>
 
-                  {/* Número */}
                   <div>
                     <label htmlFor="direccionEnvio.numero" className="block text-sm font-medium text-gray-700 mb-1">
                       Número <span className="text-red-500">*</span>
@@ -413,7 +378,6 @@ const Checkout = () => {
                 </div>
 
                 <div className="mb-6">
-                  {/* Departamento / Casa */}
                   <div>
                     <label htmlFor="direccionEnvio.departamento" className="block text-sm font-medium text-gray-700 mb-1">
                       Departamento / Casa (opcional)
@@ -431,7 +395,6 @@ const Checkout = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  {/* Comuna */}
                   <div>
                     <label htmlFor="direccionEnvio.comuna" className="block text-sm font-medium text-gray-700 mb-1">
                       Comuna <span className="text-red-500">*</span>
@@ -448,7 +411,6 @@ const Checkout = () => {
                     {formErrors['direccionEnvio.comuna'] && <p className="mt-1 text-sm text-red-500">{formErrors['direccionEnvio.comuna']}</p>}
                   </div>
 
-                  {/* Ciudad */}
                   <div>
                     <label htmlFor="direccionEnvio.ciudad" className="block text-sm font-medium text-gray-700 mb-1">
                       Ciudad <span className="text-red-500">*</span>
@@ -465,7 +427,6 @@ const Checkout = () => {
                     {formErrors['direccionEnvio.ciudad'] && <p className="mt-1 text-sm text-red-500">{formErrors['direccionEnvio.ciudad']}</p>}
                   </div>
 
-                  {/* Región */}
                   <div>
                     <label htmlFor="direccionEnvio.region" className="block text-sm font-medium text-gray-700 mb-1">
                       Región <span className="text-red-500">*</span>
@@ -500,7 +461,6 @@ const Checkout = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  {/* Código Postal */}
                   <div>
                     <label htmlFor="direccionEnvio.codigoPostal" className="block text-sm font-medium text-gray-700 mb-1">
                       Código Postal (opcional)
@@ -518,7 +478,6 @@ const Checkout = () => {
                 </div>
 
                 <div className="mb-6">
-                  {/* Instrucciones */}
                   <div>
                     <label htmlFor="direccionEnvio.instrucciones" className="block text-sm font-medium text-gray-700 mb-1">
                       Instrucciones de entrega (opcional)
@@ -566,7 +525,6 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Método de pago */}
             {etapa === 2 && (
               <div className="p-8">
                 <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
@@ -675,7 +633,6 @@ const Checkout = () => {
               </div>
             )}
 
-            {/* Confirmación de pedido */}
             {etapa === 3 && (
               <div className="p-8">
                 <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
@@ -792,7 +749,6 @@ const Checkout = () => {
           </form>
         </div>
 
-        {/* Resumen del pedido */}
         <div className="lg:col-span-1">
           <div className="bg-white shadow-lg rounded-2xl p-8 sticky top-6 animate-fadeIn">
             <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
@@ -863,7 +819,6 @@ const Checkout = () => {
               </div>
             </div>
             
-            {/* Fecha estimada de entrega */}
             <div className="bg-[#FFF9E6] rounded-xl p-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-[#FFD15C] p-2">
@@ -884,7 +839,6 @@ const Checkout = () => {
               </div>
             </div>
             
-            {/* Políticas */}
             <div className="text-xs text-gray-500 space-y-2">
               <p className="flex items-center gap-1">
                 <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -912,24 +866,6 @@ const Checkout = () => {
   );
 };
 
-// Estilos globales para los botones (agregar al CSS global)
-const globalStyles = `
-  .btn-primary {
-    @apply py-3 px-6 bg-[#FFD15C] hover:bg-[#FFC132] text-white font-bold rounded-full shadow-md transition-all duration-300;
-  }
   
-  .btn-secondary {
-    @apply py-3 px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-full shadow-md transition-all duration-300;
-  }
-  
-  .animate-fadeIn {
-    animation: fadeIn 0.5s ease-in-out;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-`;
 
 export default Checkout;

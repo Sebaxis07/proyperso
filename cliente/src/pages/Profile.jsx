@@ -1,9 +1,8 @@
-// cliente/src/pages/Profile.jsx
 import { useState, useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import InfoCard, { UserIcon, EmailIcon, PhoneIcon, IdIcon } from '../components/InfoCard';
-import axios from 'axios'; // Añadir este import
+import axios from 'axios';
 
 const Profile = () => {
   const { currentUser, updateProfile, error } = useContext(AuthContext);
@@ -12,7 +11,6 @@ const Profile = () => {
   const [formErrors, setFormErrors] = useState({});
   const [pedidosCount, setPedidosCount] = useState(0);
 
-  // Estado para el formulario
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -27,7 +25,6 @@ const Profile = () => {
     }
   });
 
-  // Cargar datos del usuario cuando esté disponible
   useEffect(() => {
     if (currentUser) {
       setFormData({
@@ -46,7 +43,6 @@ const Profile = () => {
     }
   }, [currentUser]);
 
-  // Añadir efecto para obtener el conteo de pedidos
   useEffect(() => {
     const fetchPedidosCount = async () => {
       try {
@@ -65,12 +61,10 @@ const Profile = () => {
     }
   }, [currentUser]);
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     
     if (name.includes('.')) {
-      // Manejar cambios en campos anidados (dirección)
       const [parent, child] = name.split('.');
       setFormData({
         ...formData,
@@ -80,7 +74,6 @@ const Profile = () => {
         }
       });
     } else {
-      // Manejar cambios en campos normales
       setFormData({
         ...formData,
         [name]: value
@@ -88,21 +81,17 @@ const Profile = () => {
     }
   };
 
-  // Validar el formulario
   const validateForm = () => {
     const errors = {};
 
-    // Validar nombre
     if (!formData.nombre.trim()) {
       errors.nombre = 'El nombre es obligatorio';
     }
 
-    // Validar apellido
     if (!formData.apellido.trim()) {
       errors.apellido = 'El apellido es obligatorio';
     }
 
-    // Validar campos obligatorios de dirección
     if (!formData.direccion.calle.trim()) {
       errors['direccion.calle'] = 'La calle es obligatoria';
     }
@@ -123,7 +112,6 @@ const Profile = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Manejar envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -133,14 +121,12 @@ const Profile = () => {
         await updateProfile(formData);
         setIsEditing(false);
       } catch (err) {
-        // El error ya se maneja en el contexto
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  // Modificar la sección del Resumen de Cuenta
   const ResumenCuenta = () => (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sticky top-8 transform hover:scale-[1.02] transition-all duration-300">
       <h3 className="text-xl font-bold text-gray-800 mb-6">Resumen de Cuenta</h3>
@@ -169,7 +155,6 @@ const Profile = () => {
     </div>
   );
 
-  // Modificar la sección de Dirección para permitir edición independiente
   const DireccionSection = () => (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300">
       <div className="p-8">
@@ -230,7 +215,6 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 py-12 animate-fadeIn">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header con animación */}
         <div className="relative mb-16 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Mi Perfil
@@ -241,7 +225,6 @@ const Profile = () => {
           </p>
         </div>
 
-        {/* Botones de Acción Flotantes */}
         <div className="fixed bottom-8 right-8 flex flex-col gap-4 z-50">
           <Link
             to="/pedidos"
@@ -264,11 +247,8 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Tarjetas de Información */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Panel Principal */}
           <div className="lg:col-span-8 space-y-8">
-            {/* Información Personal */}
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300">
               <div className="p-8">
                 <div className="flex items-center justify-between mb-8">
@@ -293,10 +273,8 @@ const Profile = () => {
                 </div>
 
                 {isEditing ? (
-                  // Formulario
                   <form onSubmit={handleSubmit} className="space-y-6 animate-fadeIn">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      {/* Nombre */}
                       <div>
                         <label htmlFor="nombre" className="form-label">Nombre</label>
                         <input
@@ -310,7 +288,6 @@ const Profile = () => {
                         {formErrors.nombre && <p className="form-error">{formErrors.nombre}</p>}
                       </div>
 
-                      {/* Apellido */}
                       <div>
                         <label htmlFor="apellido" className="form-label">Apellido</label>
                         <input
@@ -326,7 +303,6 @@ const Profile = () => {
                     </div>
 
                     <div className="mb-4">
-                      {/* Teléfono */}
                       <div>
                         <label htmlFor="telefono" className="form-label">Teléfono</label>
                         <input
@@ -343,7 +319,6 @@ const Profile = () => {
                     <h3 className="text-xl font-semibold mb-4 mt-6">Dirección</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      {/* Calle */}
                       <div>
                         <label htmlFor="direccion.calle" className="form-label">Calle</label>
                         <input
@@ -357,7 +332,6 @@ const Profile = () => {
                         {formErrors['direccion.calle'] && <p className="form-error">{formErrors['direccion.calle']}</p>}
                       </div>
 
-                      {/* Número */}
                       <div>
                         <label htmlFor="direccion.numero" className="form-label">Número</label>
                         <input
@@ -373,7 +347,6 @@ const Profile = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      {/* Comuna */}
                       <div>
                         <label htmlFor="direccion.comuna" className="form-label">Comuna</label>
                         <input
@@ -387,7 +360,6 @@ const Profile = () => {
                         {formErrors['direccion.comuna'] && <p className="form-error">{formErrors['direccion.comuna']}</p>}
                       </div>
 
-                      {/* Ciudad */}
                       <div>
                         <label htmlFor="direccion.ciudad" className="form-label">Ciudad</label>
                         <input
@@ -401,7 +373,6 @@ const Profile = () => {
                         {formErrors['direccion.ciudad'] && <p className="form-error">{formErrors['direccion.ciudad']}</p>}
                       </div>
 
-                      {/* Región */}
                       <div>
                         <label htmlFor="direccion.region" className="form-label">Región</label>
                         <input
@@ -417,7 +388,6 @@ const Profile = () => {
                     </div>
 
                     <div className="mb-6">
-                      {/* Código Postal */}
                       <div>
                         <label htmlFor="direccion.codigoPostal" className="form-label">Código Postal</label>
                         <input
@@ -457,7 +427,6 @@ const Profile = () => {
                     </div>
                   </form>
                 ) : (
-                  // Vista de información
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
                     <InfoCard 
                       label="Nombre Completo"

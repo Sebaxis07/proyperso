@@ -11,11 +11,9 @@ const AdminUsers = () => {
   const [filtroRol, setFiltroRol] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Estado para cambio de rol
   const [changingRoleUserId, setChangingRoleUserId] = useState(null);
   const [newRole, setNewRole] = useState('');
 
-  // Opciones para filtro de rol
   const roles = [
     { id: '', nombre: 'Todos los roles' },
     { id: 'cliente', nombre: 'Cliente' },
@@ -51,7 +49,6 @@ const AdminUsers = () => {
     fetchUsuarios();
   }, []);
 
-  // Filtrar usuarios
   const usuariosFiltrados = usuarios.filter(usuario => {
     const nombreCompleto = `${usuario.nombre} ${usuario.apellido}`.toLowerCase();
     const matchNombre = nombreCompleto.includes(filtroNombre.toLowerCase()) || 
@@ -62,7 +59,6 @@ const AdminUsers = () => {
     return matchNombre && matchRol;
   });
 
-  // Eliminar usuario
   const handleDeleteUser = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -75,10 +71,8 @@ const AdminUsers = () => {
 
       await axios.delete(`/api/usuarios/${id}`, config);
       
-      // Actualizar la lista de usuarios
       setUsuarios(usuarios.filter(usuario => usuario._id !== id));
       
-      // Cerrar modal de confirmación
       setConfirmDelete(null);
     } catch (err) {
       console.error('Error al eliminar usuario:', err);
@@ -86,7 +80,6 @@ const AdminUsers = () => {
     }
   };
 
-  // Cambiar rol de usuario
   const handleChangeRole = async (userId) => {
     try {
       const token = localStorage.getItem('token');
@@ -100,7 +93,6 @@ const AdminUsers = () => {
 
       await axios.put(`/api/usuarios/${userId}/rol`, { rol: newRole }, config);
       
-      // Actualizar la lista de usuarios
       setUsuarios(usuarios.map(usuario => {
         if (usuario._id === userId) {
           return { ...usuario, rol: newRole };
@@ -108,7 +100,6 @@ const AdminUsers = () => {
         return usuario;
       }));
       
-      // Cerrar edición
       setChangingRoleUserId(null);
     } catch (err) {
       console.error('Error al cambiar el rol:', err);
@@ -132,7 +123,6 @@ const AdminUsers = () => {
         </Link>
       </div>
       
-      {/* Filtros */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -169,7 +159,6 @@ const AdminUsers = () => {
         </div>
       </div>
       
-      {/* Mensajes de estado */}
       {loading ? (
         <div className="flex justify-center items-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>

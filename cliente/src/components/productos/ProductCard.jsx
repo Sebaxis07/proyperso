@@ -1,4 +1,3 @@
-// cliente/src/components/productos/ProductCard.jsx
 import { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../../context/CartContext';
@@ -8,12 +7,10 @@ const ProductCard = ({ producto }) => {
   const [imageError, setImageError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   
-  // Calcular precio con descuento si está en oferta
   const precioFinal = producto.enOferta 
     ? producto.precio * (1 - producto.descuento / 100) 
     : producto.precio;
   
-  // Formatear precio como moneda chilena
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -26,30 +23,23 @@ const ProductCard = ({ producto }) => {
     addToCart(producto);
   };
 
-  // Determinar la URL de la imagen o usar placeholder
   const placeholderImage = '/placeholder-product.jpg';
 
-  // Función para obtener la URL completa de la imagen
   const getFullImageUrl = () => {
     if (!producto.imagenUrl || imageError) {
       return placeholderImage;
     }
     
-    // Si ya es una URL completa
     if (producto.imagenUrl.startsWith('http')) {
       return producto.imagenUrl;
     }
     
-    // Si es una ruta relativa
-    // Aseguramos que comience con / para que sea una ruta absoluta desde el dominio
     const url = producto.imagenUrl.startsWith('/') 
       ? producto.imagenUrl 
       : `/${producto.imagenUrl}`;
       
-    // Obtenemos la URL base del backend desde las variables de entorno
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     
-    // Construimos la URL completa
     return `${baseUrl}${url}`;
   };
 
@@ -61,7 +51,6 @@ const ProductCard = ({ producto }) => {
     >
       <Link to={`/productos/${producto._id}`} className="block relative">
         <div className="relative h-72 bg-gray-100 overflow-hidden">
-          {/* Imagen con efecto de zoom suave al hover */}
           <img
             src={getFullImageUrl()}
             alt={producto.nombre}
@@ -70,11 +59,8 @@ const ProductCard = ({ producto }) => {
             }`}
             onError={() => setImageError(true)}
           />
-          
-          {/* Overlay con gradiente */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 hover:opacity-100"></div>
           
-          {/* Badges con mejor diseño */}
           <div className="absolute top-4 left-4 flex flex-col gap-2">
             {producto.enOferta && (
               <span className="px-4 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full shadow-lg backdrop-blur-sm bg-opacity-90 flex items-center">
@@ -115,17 +101,12 @@ const ProductCard = ({ producto }) => {
         </div>
         
         <div className="p-6">
-          {/* Categorías con diseño mejorado */}
           <div className="flex items-center text-sm text-gray-600 mb-3">
             <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium capitalize">{producto.tipoMascota}</span>
             <span className="mx-2 text-gray-300">•</span>
             <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium capitalize">{producto.categoria}</span>
           </div>
-          
-          {/* Título del producto */}
           <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 h-[56px]">{producto.nombre}</h3>
-          
-          {/* Precios y botón */}
           <div className="flex justify-between items-center mt-5">
             <div>
               {producto.enOferta ? (

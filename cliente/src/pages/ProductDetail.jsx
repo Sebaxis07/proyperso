@@ -1,4 +1,3 @@
-// cliente/src/pages/ProductDetail.jsx
 import { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
@@ -21,20 +20,16 @@ const ProductDetail = () => {
     const fetchProducto = async () => {
       try {
         setLoading(true);
-        setImageError(false); // Reset image error state on new product load
+        setImageError(false); 
         const res = await axios.get(`/api/productos/${id}`);
         
-        // Log para depuración
-        console.log("Datos del producto recibidos:", res.data.data);
         
         setProducto(res.data.data);
         
-        // Obtener productos relacionados
         const resRelacionados = await axios.get(
           `/api/productos?categoria=${res.data.data.categoria}&tipoMascota=${res.data.data.tipoMascota}&limit=4`
         );
         
-        // Filtrar el producto actual de los relacionados
         const relacionadosFiltrados = resRelacionados.data.data.filter(
           (prod) => prod._id !== id
         );
@@ -49,11 +44,9 @@ const ProductDetail = () => {
     };
 
     fetchProducto();
-    // Resetear cantidad cuando cambie el ID
     setCantidad(1);
   }, [id]);
 
-  // Formatear precio como moneda chilena
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -61,12 +54,10 @@ const ProductDetail = () => {
     }).format(price);
   };
 
-  // Calcular precio con descuento si está en oferta
   const precioFinal = producto?.enOferta 
     ? producto.precio * (1 - producto.descuento / 100) 
     : producto?.precio;
 
-  // Manejar cambio de cantidad
   const handleCantidadChange = (e) => {
     const value = parseInt(e.target.value);
     if (value > 0 && value <= (producto?.stock || 1)) {
@@ -74,51 +65,37 @@ const ProductDetail = () => {
     }
   };
 
-  // Incrementar cantidad
   const incrementarCantidad = () => {
     if (cantidad < (producto?.stock || 1)) {
       setCantidad(cantidad + 1);
     }
   };
 
-  // Decrementar cantidad
   const decrementarCantidad = () => {
     if (cantidad > 1) {
       setCantidad(cantidad - 1);
     }
   };
 
-  // Agregar al carrito
   const handleAddToCart = () => {
     addToCart(producto, cantidad);
     setShowModal(true);
   };
 
-  // Imagen predeterminada para casos de error
   const placeholderImage = '/placeholder-product.jpg';
 
-  // Función mejorada para obtener la URL completa de la imagen
   const getFullImageUrl = (producto) => {
     if (!producto) return placeholderImage;
     
-    // Depuración
-    console.log("Procesando imagen para producto:", producto._id);
-    console.log("Propiedades de imagen disponibles:", {
-      imagenUrl: producto.imagenUrl,
-      imagen: producto.imagen,
-      imagenUrlCompleta: producto.imagenUrlCompleta
-    });
     
-    // 1. Verificar si existe la propiedad imagenUrl directa
+    
     if (producto.imagenUrl && !imageError) {
       console.log("Usando imagenUrl:", producto.imagenUrl);
       
-      // Si ya es una URL completa (comienza con http)
       if (producto.imagenUrl.startsWith('http')) {
         return producto.imagenUrl;
       }
       
-      // Si es una ruta relativa
       const path = producto.imagenUrl.startsWith('/') 
         ? producto.imagenUrl 
         : `/${producto.imagenUrl}`;
@@ -127,39 +104,32 @@ const ProductDetail = () => {
       return `${baseUrl}${path}`;
     }
     
-    // 2. Verificar si existe la propiedad imagen anidada
     if (producto.imagen) {
       console.log("Usando producto.imagen:", producto.imagen);
       
-      // Si tiene URL directa en la propiedad imagen
       if (producto.imagen.url && producto.imagen.url !== 'no-image.jpg') {
         const imageUrl = producto.imagen.url;
         
-        // Si ya es una URL completa
         if (imageUrl.startsWith('http')) {
           return imageUrl;
         }
         
-        // Si es una ruta relativa
         const path = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         return `${baseUrl}${path}`;
       }
       
-      // Si tiene nombre pero no URL
       if (producto.imagen.nombre && producto.imagen.nombre !== 'no-image.jpg') {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         return `${baseUrl}/uploads/productos/${producto.imagen.nombre}`;
       }
     }
     
-    // 3. Verificar si existe la propiedad imagenUrlCompleta (virtual)
     if (producto.imagenUrlCompleta) {
       console.log("Usando imagenUrlCompleta:", producto.imagenUrlCompleta);
       return producto.imagenUrlCompleta;
     }
     
-    // 4. Si nada funcionó, usar imagen predeterminada
     console.log("Ninguna propiedad de imagen válida encontrada, usando placeholder");
     return placeholderImage;
   };
@@ -198,7 +168,6 @@ const ProductDetail = () => {
     <>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Breadcrumb mejorado */}
           <nav className="flex items-center space-x-2 text-sm mb-12 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-gray-100">
             <Link to="/" className="text-gray-500 hover:text-[#FFD15C] transition-colors duration-200 flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -219,7 +188,6 @@ const ProductDetail = () => {
           </nav>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-            {/* Galería de imágenes mejorada */}
             <div className="space-y-4">
               <div className="aspect-w-1 aspect-h-1 bg-white rounded-3xl shadow-lg overflow-hidden group">
                 <img 
@@ -234,7 +202,7 @@ const ProductDetail = () => {
                   style={{
                     maxHeight: '100%',
                     maxWidth: '100%',
-                    objectFit: 'cover' // Cambiado a object-cover
+                    objectFit: 'cover' 
                   }}
                 />
                 {producto.enOferta && (
@@ -245,7 +213,6 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Información del producto mejorada */}
             <div className="bg-white rounded-3xl shadow-lg p-8 lg:p-12 space-y-8">
               <div className="space-y-4">
                 <h1 className="text-4xl font-bold text-gray-800">{producto.nombre}</h1>
@@ -259,7 +226,6 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Precio y descuento mejorados */}
               <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
                 {producto.enOferta ? (
                   <div className="space-y-2">
@@ -287,7 +253,6 @@ const ProductDetail = () => {
                 )}
               </div>
 
-              {/* Stock y disponibilidad mejorados */}
               {producto.stock > 0 ? (
                 <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
                   <div className="flex items-center gap-3">
@@ -315,7 +280,6 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* Selector de cantidad y botón de compra mejorados */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100">
                   <span className="text-gray-600 font-medium">Cantidad</span>
@@ -358,7 +322,6 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Descripción del producto */}
           <div className="bg-white rounded-3xl shadow-lg p-8 mb-16">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Descripción del producto</h2>
             <div className="prose max-w-none text-gray-700">
@@ -366,7 +329,6 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Productos Relacionados */}
           {productosRelacionados.length > 0 && (
             <div className="mt-16 animate-fadeIn">
               <h2 className="text-3xl font-bold text-gray-800 mb-8 relative">

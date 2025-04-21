@@ -1,4 +1,3 @@
-// cliente/src/pages/admin/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -36,7 +35,6 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Colores para gráficos
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   useEffect(() => {
@@ -55,51 +53,39 @@ const AdminDashboard = () => {
           }
         };
     
-        // Obtener datos de diferentes endpoints
         const [productos, pedidos, usuarios] = await Promise.all([
           axios.get('/api/productos', config),
-          axios.get('/api/pedidos', config), // Asegúrate de que esta ruta te devuelva todos los pedidos
+          axios.get('/api/pedidos', config),
           axios.get('/api/usuarios', config)
         ]);
         
-        // Debug: Ver qué datos estamos recibiendo
         console.log("Datos de pedidos:", pedidos.data);
         console.log("Estructura de un pedido:", pedidos.data.data.length > 0 ? pedidos.data.data[0] : "No hay pedidos");
         
-        // Filtrar pedidos pendientes
         const pedidosList = pedidos.data.data || [];
         const pedidosPendientes = pedidosList.filter(
           pedido => pedido.estadoPedido === 'pendiente'
         ).length;
     
-        // Calcular total de montos de pedidos
         const totalMontosPedidos = pedidosList.reduce(
           (total, pedido) => total + (pedido.precioTotal || pedido.total || 0), 
           0
         );
     
-        // Preparar datos para gráficos
-        // Procesar los datos para los pedidos mensuales
         const pedidosPorMes = procesarPedidosMensuales(pedidosList);
         
-        // Procesar los datos para productos más pedidos
         const topProductos = procesarProductosMasPedidos(pedidosList);
         
-        // Procesar estado de pedidos
         const estadoPedidosData = procesarEstadoPedidos(pedidosList);
         
-        // Procesar usuarios por mes
         const usuariosPorMes = procesarUsuariosPorMes(pedidosList, usuarios.data.data || []);
         
-        // Generar reporte mensual
         const reporteMes = generarReporteMensual(pedidosList, usuarios.data.data || []);
         
-        // Guardar últimos pedidos para mostrar en la tabla
         const ultimos = pedidosList.sort((a, b) => 
           new Date(b.fechaCreacion || b.createdAt || b.fecha) - new Date(a.fechaCreacion || a.createdAt || a.fecha)
         ).slice(0, 5);
     
-        // Actualizar estados
         setStats({
           totalProductos: productos.data.total || 0,
           totalPedidos: pedidos.data.count || 0,
@@ -125,7 +111,6 @@ const AdminDashboard = () => {
       }
     };
     
-    // 2. Mejorar procesarPedidosMensuales para manejar diferentes estructuras
     const procesarPedidosMensuales = (pedidos) => {
       const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       const pedidosPorMes = Array(12).fill().map((_, i) => ({
@@ -135,13 +120,11 @@ const AdminDashboard = () => {
       }));
       
       pedidos.forEach(pedido => {
-        // Detectar qué campo de fecha existe en el pedido
         const fechaPedido = pedido.fechaCreacion || pedido.createdAt || pedido.fecha;
         if (fechaPedido) {
           const fecha = new Date(fechaPedido);
           const mesIndex = fecha.getMonth();
           
-          // Verificar diferentes posibles campos para el monto total
           const monto = pedido.precioTotal || pedido.total || 0;
           
           pedidosPorMes[mesIndex].montos += monto;
@@ -149,26 +132,21 @@ const AdminDashboard = () => {
         }
       });
       
-      // Filtrar solo los meses con datos
       return pedidosPorMes.filter(mes => mes.cantidad > 0);
     };
     
-    // 3. Mejorar procesarProductosMasPedidos para manejar diferentes estructuras
     const procesarProductosMasPedidos = (pedidos) => {
       const productosCount = {};
       
       pedidos.forEach(pedido => {
-        // Verificar si los items están bajo "items" o bajo "productos"
         const itemsPedido = pedido.items || pedido.productos || [];
         
         if (Array.isArray(itemsPedido)) {
           itemsPedido.forEach(item => {
-            // Manejar diferentes estructuras para identificar el producto
             const productoId = 
               (item.producto && typeof item.producto === 'object') ? item.producto._id : 
               item.productoId || item.producto || 'desconocido';
             
-            // Obtener el nombre del producto según la estructura
             const nombre = 
               (item.producto && typeof item.producto === 'object') ? item.producto.nombre : 
               item.nombre || 'Producto';
@@ -188,10 +166,7 @@ const AdminDashboard = () => {
       });
       
       
-      // Añadir mensaje de depuración
-      console.log("Productos procesados:", productosCount);
       
-      // Convertir a array y ordenar
       return Object.values(productosCount)
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
@@ -207,11 +182,9 @@ const AdminDashboard = () => {
         recurrentes: 0
       }));
       
-      // Procesar usuarios nuevos por fecha de registro
       usuarios.forEach(usuario => {
         const fechaRegistro = new Date(usuario.fechaCreacion || usuario.createdAt || usuario.fecha);
-        if (isNaN(fechaRegistro.getTime())) return; // Verificar que la fecha es válida
-        
+        if (isNaN(fechaRegistro.getTime())) return; 
         const mesActual = new Date().getMonth();
         const anioActual = new Date().getFullYear();
         
@@ -220,12 +193,11 @@ const AdminDashboard = () => {
         }
       });
       
-      // Procesar usuarios recurrentes (los que hacen pedidos)
       const clientesPorMes = {};
       
       pedidos.forEach(pedido => {
         const fechaPedido = new Date(pedido.fechaCreacion || pedido.createdAt || pedido.fecha);
-        if (isNaN(fechaPedido.getTime())) return; // Verificar que la fecha es válida
+        if (isNaN(fechaPedido.getTime())) return; 
         
         if (pedido.usuario) {
           const mesActual = new Date().getMonth();
@@ -246,21 +218,17 @@ const AdminDashboard = () => {
         }
       });
       
-      // Actualizar usuarios recurrentes
       Object.entries(clientesPorMes).forEach(([mesIndex, usuarios]) => {
         usuariosPorMes[mesIndex].recurrentes = usuarios.size;
       });
       
-      // Filtrar solo los meses con datos
       return usuariosPorMes.filter(mes => mes.nuevos > 0 || mes.recurrentes > 0);
     };
     
-    // 4. Mejorar procesarEstadoPedidos para asegurar valores consistentes
     const procesarEstadoPedidos = (pedidos) => {
       const estados = {};
       
       pedidos.forEach(pedido => {
-        // Asegurar que siempre hay un estado
         const estado = pedido.estadoPedido || 'pendiente';
         
         if (!estados[estado]) {
@@ -273,56 +241,44 @@ const AdminDashboard = () => {
         estados[estado].value += 1;
       });
       
-      // Añadir mensaje de depuración
-      console.log("Estados de pedidos procesados:", estados);
       
-      // Convertir a array
       return Object.values(estados);
     };
     
-    // 5. Mejorar generarReporteMensual para manejar diferentes estructuras
     const generarReporteMensual = (pedidos, usuarios) => {
       const fechaActual = new Date();
       const mesActual = fechaActual.getMonth();
       const anioActual = fechaActual.getFullYear();
       
-      // Filtrar pedidos del mes actual
       const pedidosMesActual = pedidos.filter(pedido => {
         const fechaPedido = new Date(pedido.fechaCreacion || pedido.createdAt || pedido.fecha);
         return fechaPedido.getMonth() === mesActual && fechaPedido.getFullYear() === anioActual;
       });
       
-      // Calcular montos de pedidos del mes
       const montoPedidosMes = pedidosMesActual.reduce((total, pedido) => {
         return total + (pedido.precioTotal || pedido.total || 0);
       }, 0);
       
-      // Cantidad de pedidos del mes
       const pedidosMes = pedidosMesActual.length;
       
-      // Calcular ticket promedio
       const ticketPromedio = pedidosMes > 0 ? montoPedidosMes / pedidosMes : 0;
       
-      // Clientes nuevos del mes
       const clientesNuevosMes = usuarios.filter(usuario => {
         if (!usuario.fechaCreacion && !usuario.createdAt) return false;
         const fechaRegistro = new Date(usuario.fechaCreacion || usuario.createdAt);
         return fechaRegistro.getMonth() === mesActual && fechaRegistro.getFullYear() === anioActual;
       }).length;
       
-      // Productos más pedidos del mes
       const productosMesActual = {};
       pedidosMesActual.forEach(pedido => {
         const itemsPedido = pedido.items || pedido.productos || [];
         
         if (Array.isArray(itemsPedido)) {
           itemsPedido.forEach(item => {
-            // Manejar diferentes estructuras para identificar el producto
             const productoId = 
               (item.producto && typeof item.producto === 'object') ? item.producto._id : 
               item.productoId || item.producto || 'desconocido';
             
-            // Obtener el nombre del producto según la estructura
             const nombre = 
               (item.producto && typeof item.producto === 'object') ? item.producto.nombre : 
               item.nombre || 'Producto';
@@ -344,27 +300,22 @@ const AdminDashboard = () => {
         }
       });
       
-      // Convertir a array y ordenar por cantidad
       const topProductosMes = Object.values(productosMesActual)
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
       
-      // Calcular comparación con mes anterior
       const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
       const anioMesAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
       
-      // Filtrar pedidos del mes anterior
       const pedidosMesAnterior = pedidos.filter(pedido => {
         const fechaPedido = new Date(pedido.fechaCreacion || pedido.createdAt || pedido.fecha);
         return fechaPedido.getMonth() === mesAnterior && fechaPedido.getFullYear() === anioMesAnterior;
       });
       
-      // Calcular pedidos del mes anterior
       const montoPedidosMesAnterior = pedidosMesAnterior.reduce((total, pedido) => {
         return total + (pedido.precioTotal || pedido.total || 0);
       }, 0);
       
-      // Calcular porcentaje de cambio
       let porcentajeCambio = 0;
       if (montoPedidosMesAnterior > 0) {
         porcentajeCambio = ((montoPedidosMes - montoPedidosMesAnterior) / montoPedidosMesAnterior) * 100;
@@ -407,7 +358,6 @@ const AdminDashboard = () => {
       <h1 className="text-3xl font-bold mb-8">Panel de Administración</h1>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Tarjeta Productos */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -427,7 +377,6 @@ const AdminDashboard = () => {
           </div>
         </div>
         
-        {/* Tarjeta Pedidos */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-green-100 text-green-600">
@@ -447,7 +396,6 @@ const AdminDashboard = () => {
           </div>
         </div>
         
-        {/* Tarjeta Usuarios */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 text-purple-600">
@@ -467,7 +415,6 @@ const AdminDashboard = () => {
           </div>
         </div>
         
-        {/* Tarjeta Total de Montos de Pedidos */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
@@ -488,7 +435,6 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      {/* Gráficos - Sección Nueva */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Gráfico de pedidos mensuales */}
         <div className="bg-white rounded-lg shadow-md p-6">
@@ -506,7 +452,6 @@ const AdminDashboard = () => {
           </ResponsiveContainer>
         </div>
         
-        {/* Gráfico de productos más pedidos */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Productos Más Pedidos</h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -521,7 +466,6 @@ const AdminDashboard = () => {
           </ResponsiveContainer>
         </div>
         
-        {/* Gráfico de usuarios por mes */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Usuarios por Mes</h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -537,7 +481,6 @@ const AdminDashboard = () => {
           </ResponsiveContainer>
         </div>
         
-        {/* Gráfico de estado de pedidos */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Estado de Pedidos</h2>
           <ResponsiveContainer width="100%" height={300}>
@@ -564,14 +507,12 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      {/* Reporte Mensual - Nueva sección */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">
           Reporte Mensual ({new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()})
         </h2>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Tarjetas de métricas principales */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-4 rounded shadow">
@@ -600,7 +541,6 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          {/* Top productos del mes */}
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="text-md font-medium mb-4">Productos Más Pedidos del Mes</h3>
             <div className="space-y-2">
@@ -631,7 +571,6 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      {/* Acciones rápidas */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Acciones rápidas</h2>
         
@@ -666,7 +605,6 @@ const AdminDashboard = () => {
         </div>
       </div>
       
-      {/* Últimos pedidos */}
       
     </div>
   );

@@ -1,4 +1,3 @@
-// cliente/src/pages/Register.jsx
 import { useState, useContext, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -7,14 +6,12 @@ const Register = () => {
   const navigate = useNavigate();
   const { register, currentUser, error } = useContext(AuthContext);
 
-  // Si el usuario ya está autenticado, redirigir a la página principal
   useEffect(() => {
     if (currentUser) {
       navigate('/');
     }
   }, [currentUser, navigate]);
 
-  // Estados para el formulario
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -40,7 +37,6 @@ const Register = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 2;
 
-  // Destructuring de formData
   const { 
     nombre, 
     apellido, 
@@ -52,12 +48,10 @@ const Register = () => {
     direccion 
   } = formData;
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     
     if (name.includes('.')) {
-      // Manejar cambios en campos anidados (dirección)
       const [parent, child] = name.split('.');
       setFormData({
         ...formData,
@@ -67,7 +61,6 @@ const Register = () => {
         }
       });
     } else {
-      // Manejar cambios en campos normales
       setFormData({
         ...formData,
         [name]: value
@@ -75,48 +68,39 @@ const Register = () => {
     }
   };
 
-  // Validar el formulario según el paso actual
   const validateStep = (step) => {
     const errors = {};
 
     if (step === 1) {
-      // Validar nombre
       if (!nombre.trim()) {
         errors.nombre = 'El nombre es obligatorio';
       }
 
-      // Validar apellido
       if (!apellido.trim()) {
         errors.apellido = 'El apellido es obligatorio';
       }
 
-      // Validar email
       if (!email) {
         errors.email = 'El email es obligatorio';
       } else if (!/^\S+@\S+\.\S+$/.test(email)) {
         errors.email = 'Email inválido';
       }
-
-      // Validar RUT (básico)
       if (!rut.trim()) {
         errors.rut = 'El RUT es obligatorio';
       } else if (!/^[0-9]{7,8}-[0-9kK]$/.test(rut.trim())) {
         errors.rut = 'Formato de RUT inválido (ej: 12345678-9)';
       }
 
-      // Validar contraseña
       if (!password) {
         errors.password = 'La contraseña es obligatoria';
       } else if (password.length < 6) {
         errors.password = 'La contraseña debe tener al menos 6 caracteres';
       }
 
-      // Confirmar contraseña
       if (password !== confirmPassword) {
         errors.confirmPassword = 'Las contraseñas no coinciden';
       }
     } else if (step === 2) {
-      // Validar campos obligatorios de dirección
       if (!direccion.calle.trim()) {
         errors['direccion.calle'] = 'La calle es obligatoria';
       }
@@ -138,7 +122,6 @@ const Register = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Validar todo el formulario
   const validateForm = () => {
     const personalInfoValid = validateStep(1);
     const addressValid = validateStep(2);
@@ -153,13 +136,11 @@ const Register = () => {
     }
   };
 
-  // Manejar el retroceso al paso anterior
   const handlePrevStep = () => {
     setCurrentStep(currentStep - 1);
     window.scrollTo(0, 0);
   };
 
-  // Manejar envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -170,27 +151,21 @@ const Register = () => {
         if (validateForm()) {
           setIsSubmitting(true);
           try {
-            // Eliminar confirmPassword antes de enviar
             const { confirmPassword, ...registerData } = formData;
             await register(registerData);
-            // Si llega aquí, el registro fue exitoso y el contexto redirigirá
           } catch (err) {
             setIsSubmitting(false);
-            // El error ya se maneja en el contexto
           }
         }
       }
     }
   };
 
-  // Formatear RUT mientras se escribe
   const handleRutChange = (e) => {
     let value = e.target.value;
     
-    // Eliminar todos los caracteres excepto números y K
     value = value.replace(/[^0-9kK]/g, '');
     
-    // Formatear con guión si tiene suficientes caracteres
     if (value.length > 1) {
       const dv = value.slice(-1);
       const rutBody = value.slice(0, -1);
@@ -203,12 +178,10 @@ const Register = () => {
     });
   };
 
-  // Alternar visibilidad de la contraseña
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  // Alternar visibilidad de la confirmación de contraseña
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
@@ -224,7 +197,6 @@ const Register = () => {
             {currentStep === 1 ? "Información personal" : "Dirección de entrega"}
           </p>
           
-          {/* Indicador de progreso */}
           <div className="mt-6">
             <div className="flex items-center justify-between">
               {Array.from({ length: totalSteps }).map((_, index) => (
@@ -268,11 +240,9 @@ const Register = () => {
         )}
         
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {/* Paso 1: Información personal */}
           {currentStep === 1 && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Nombre */}
                 <div>
                   <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
                     Nombre
@@ -303,7 +273,6 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* Apellido */}
                 <div>
                   <label htmlFor="apellido" className="block text-sm font-medium text-gray-700 mb-1">
                     Apellido
@@ -336,7 +305,6 @@ const Register = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Email */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
@@ -367,7 +335,6 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* RUT */}
                 <div>
                   <label htmlFor="rut" className="block text-sm font-medium text-gray-700 mb-1">
                     RUT
@@ -399,7 +366,6 @@ const Register = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Teléfono */}
                 <div>
                   <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-1">
                     Teléfono <span className="text-gray-500 text-xs">(opcional)</span>
@@ -422,12 +388,10 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* Placeholder para mantener la grid */}
                 <div className="hidden md:block"></div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Contraseña */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                     Contraseña
@@ -475,7 +439,6 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* Confirmar Contraseña */}
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                     Confirmar Contraseña
@@ -526,7 +489,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* Paso 2: Dirección */}
           {currentStep === 2 && (
             <div className="space-y-5">
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-md">
@@ -545,7 +507,6 @@ const Register = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Calle */}
                 <div>
                   <label htmlFor="direccion.calle" className="block text-sm font-medium text-gray-700 mb-1">
                     Calle
@@ -576,7 +537,6 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* Número */}
                 <div>
                   <label htmlFor="direccion.numero" className="block text-sm font-medium text-gray-700 mb-1">
                     Número
@@ -608,7 +568,6 @@ const Register = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {/* Comuna */}
                 <div>
                   <label htmlFor="direccion.comuna" className="block text-sm font-medium text-gray-700 mb-1">
                     Comuna
@@ -638,7 +597,6 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* Ciudad */}
                 <div>
                   <label htmlFor="direccion.ciudad" className="block text-sm font-medium text-gray-700 mb-1">
                     Ciudad
@@ -668,7 +626,6 @@ const Register = () => {
                   )}
                 </div>
 
-                {/* Región */}
                 <div>
                   <label htmlFor="direccion.region" className="block text-sm font-medium text-gray-700 mb-1">
                     Región
@@ -723,7 +680,6 @@ const Register = () => {
             </div>
           )}
 
-          {/* Botones de navegación */}
           <div className="flex justify-between space-x-3 pt-4">
             {currentStep > 1 && (
               <button

@@ -1,4 +1,3 @@
-// cliente/src/pages/admin/Orders.jsx
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -12,18 +11,15 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Filtros
   const [busqueda, setBusqueda] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState(initialEstadoFiltro);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
 
-  // Estados para edición
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [editingOrderStatus, setEditingOrderStatus] = useState('');
   const [editingOrderPaymentStatus, setEditingOrderPaymentStatus] = useState('');
 
-  // Opciones para filtro de estado
   const estadosPedido = [
     { id: '', nombre: 'Todos los estados' },
     { id: 'pendiente', nombre: 'Pendiente' },
@@ -62,7 +58,6 @@ const AdminOrders = () => {
     fetchPedidos();
   }, []);
 
-  // Formatear precio como moneda chilena
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -70,7 +65,6 @@ const AdminOrders = () => {
     }).format(price);
   };
 
-  // Formatear fecha
   const formatFecha = (fechaStr) => {
     const fecha = new Date(fechaStr);
     return fecha.toLocaleDateString('es-CL', {
@@ -80,7 +74,6 @@ const AdminOrders = () => {
     });
   };
 
-  // Obtener el color para el estado del pedido
   const getEstadoColor = (estado) => {
     const colores = {
       pendiente: 'yellow',
@@ -93,7 +86,6 @@ const AdminOrders = () => {
     return colores[estado] || 'gray';
   };
 
-  // Obtener el color para el estado del pago
   const getEstadoPagoColor = (estado) => {
     const colores = {
       pendiente: 'yellow',
@@ -104,15 +96,11 @@ const AdminOrders = () => {
     return colores[estado] || 'gray';
   };
 
-  // Filtrar pedidos
   const pedidosFiltrados = pedidos.filter(pedido => {
-    // Filtro por texto (número de pedido)
     const matchBusqueda = pedido.numeroPedido.toLowerCase().includes(busqueda.toLowerCase());
     
-    // Filtro por estado
     const matchEstado = estadoFiltro === '' || pedido.estadoPedido === estadoFiltro;
     
-    // Filtro por fecha
     let matchFecha = true;
     
     if (fechaDesde) {
@@ -135,7 +123,6 @@ const AdminOrders = () => {
     return matchBusqueda && matchEstado && matchFecha;
   });
 
-  // Actualizar estado del pedido
   const handleUpdateOrder = async (orderId) => {
     try {
       const token = localStorage.getItem('token');
@@ -147,13 +134,11 @@ const AdminOrders = () => {
         }
       };
 
-      // Esta ruta es un ejemplo, deberías crearla en tu backend
       await axios.put(`/api/pedidos/${orderId}/estado`, {
         estadoPedido: editingOrderStatus,
         estadoPago: editingOrderPaymentStatus
       }, config);
       
-      // Actualizar en el estado local
       setPedidos(pedidos.map(pedido => {
         if (pedido._id === orderId) {
           return {
@@ -165,7 +150,6 @@ const AdminOrders = () => {
         return pedido;
       }));
       
-      // Cerrar edición
       setEditingOrderId(null);
     } catch (err) {
       console.error('Error al actualizar el pedido:', err);
@@ -240,7 +224,6 @@ const AdminOrders = () => {
         </div>
       </div>
       
-      {/* Mensajes de estado */}
       {loading ? (
         <div className="flex justify-center items-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>

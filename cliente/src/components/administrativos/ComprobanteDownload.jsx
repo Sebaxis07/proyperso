@@ -4,7 +4,6 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { saveAs } from 'file-saver';
 
-// Configurar pdfMake
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 const ComprobanteDownload = ({ comprobanteId }) => {
@@ -13,7 +12,6 @@ const ComprobanteDownload = ({ comprobanteId }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Solo cargar si tenemos un ID
     if (comprobanteId) {
       fetchComprobante();
     }
@@ -33,11 +31,9 @@ const ComprobanteDownload = ({ comprobanteId }) => {
     }
   };
 
-  // Función para generar la definición del documento PDF
   const generarDefinicionPDF = () => {
     if (!comprobante) return null;
 
-    // Aquí personalizas la estructura del PDF según tus necesidades
     return {
       content: [
         { text: 'COMPROBANTE DE PAGO', style: 'header' },
@@ -46,7 +42,6 @@ const ComprobanteDownload = ({ comprobanteId }) => {
         { text: `Cliente: ${comprobante.cliente?.nombre || ''}`, margin: [0, 0, 0, 10] },
         { text: `Total: $${comprobante.total?.toFixed(2) || '0.00'}`, margin: [0, 0, 0, 10] },
         
-        // Tabla de detalles si los hay
         comprobante.detalles?.length > 0 ? {
           table: {
             headerRows: 1,
@@ -83,17 +78,14 @@ const ComprobanteDownload = ({ comprobanteId }) => {
     };
   };
 
-  // Función para descargar el comprobante como PDF
   const descargarComprobante = () => {
     if (!comprobante) return;
     
     const docDefinition = generarDefinicionPDF();
     if (!docDefinition) return;
     
-    // Generar el PDF
     const pdfDocGenerator = pdfMake.createPdf(docDefinition);
     
-    // Descargar el PDF
     pdfDocGenerator.getBlob((blob) => {
       saveAs(blob, `comprobante-${comprobante.numero || comprobanteId}.pdf`);
     });

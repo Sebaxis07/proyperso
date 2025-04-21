@@ -12,7 +12,6 @@ const AdminProducts = () => {
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Opciones para filtrar por categoría
   const categorias = [
     { id: '', nombre: 'Todas las categorías' },
     { id: 'alimentos', nombre: 'Alimentos' },
@@ -55,7 +54,6 @@ const AdminProducts = () => {
     fetchProductos();
   }, []);
 
-  // Formatear precio como moneda chilena
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -63,7 +61,6 @@ const AdminProducts = () => {
     }).format(price);
   };
 
-  // Filtrar productos
   const productosFiltrados = productos.filter(producto => {
     const coincideNombre = producto.nombre.toLowerCase().includes(filtroNombre.toLowerCase());
     const coincideCategoria = filtroCategoria === '' || producto.categoria === filtroCategoria;
@@ -71,7 +68,6 @@ const AdminProducts = () => {
     return coincideNombre && coincideCategoria;
   });
 
-  // Eliminar producto
   const handleDeleteProduct = async (id) => {
     try {
       const token = localStorage.getItem('token');
@@ -84,10 +80,8 @@ const AdminProducts = () => {
 
       await axios.delete(`/api/productos/${id}`, config);
       
-      // Actualizar la lista de productos
       setProductos(productos.filter(producto => producto._id !== id));
       
-      // Cerrar modal de confirmación
       setConfirmDelete(null);
     } catch (err) {
       console.error('Error al eliminar producto:', err);
@@ -111,7 +105,6 @@ const AdminProducts = () => {
         </Link>
       </div>
       
-      {/* Filtros */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -148,7 +141,6 @@ const AdminProducts = () => {
         </div>
       </div>
       
-      {/* Mensajes de estado */}
       {loading ? (
         <div className="flex justify-center items-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
@@ -203,7 +195,6 @@ const AdminProducts = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {productosFiltrados.map((producto) => (
                   <tr key={producto._id}>
-                    {/* Add ID cell */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500 font-mono">
                         {producto._id}
@@ -297,7 +288,6 @@ const AdminProducts = () => {
         </div>
       )}
       
-      {/* Modal de confirmación para eliminar */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">

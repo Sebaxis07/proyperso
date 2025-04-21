@@ -14,34 +14,26 @@ const Cart = () => {
       currency: 'CLP'
     }).format(price);
   };
-
-  // Función robusta para calcular el precio con descuento
   const getDiscountedPrice = (item) => {
-    // Caso 1: Si tiene oferta y descuento como propiedades
     if (item.oferta && item.descuento) {
       return item.precio - (item.precio * (item.descuento / 100));
     }
     
-    // Caso 2: Si tiene directamente precioOferta
     if (item.precioOferta) {
       return item.precioOferta;
     }
     
-    // Caso 3: Si tiene descuentoActivo y porcentajeDescuento
     if (item.descuentoActivo && item.porcentajeDescuento) {
       return item.precio - (item.precio * (item.porcentajeDescuento / 100));
     }
     
-    // Caso 4: Si tiene enOferta y descuento
     if (item.enOferta && item.descuento) {
       return item.precio - (item.precio * (item.descuento / 100));
     }
     
-    // Por defecto, devolver precio original
     return item.precio;
   };
 
-  // Verificar si un producto tiene algún tipo de descuento
   const hasDiscount = (item) => {
     return (
       (item.oferta && item.descuento) || 
@@ -51,35 +43,27 @@ const Cart = () => {
     );
   };
 
-  // Obtener el porcentaje de descuento
   const getDiscountPercentage = (item) => {
     if (item.descuento) return item.descuento;
     if (item.porcentajeDescuento) return item.porcentajeDescuento;
     if (item.precioOferta) {
-      // Calcular el porcentaje si solo tenemos el precio con oferta
       return Math.round(((item.precio - item.precioOferta) / item.precio) * 100);
     }
     return 0;
   };
 
-  // Calcular totales usando useMemo para optimizar
   const totals = useMemo(() => {
-    // Total sin descuentos
     const originalTotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     
-    // Total con descuentos
     const discountedTotal = cart.reduce((sum, item) => {
       const effectivePrice = getDiscountedPrice(item);
       return sum + (effectivePrice * item.cantidad);
     }, 0);
     
-    // Ahorro total
     const savings = originalTotal - discountedTotal;
     
-    // Costo de envío
     const costoEnvio = discountedTotal > 30000 ? 0 : 3990;
     
-    // Total con envío
     const totalConEnvio = discountedTotal + costoEnvio;
     
     return {
@@ -91,16 +75,13 @@ const Cart = () => {
     };
   }, [cart]);
 
-  // Modificar la función de actualización de cantidad
   const handleQuantityChange = (itemId, newQuantity, stockDisponible) => {
     if (newQuantity < 1) {
       return;
     }
     
     if (newQuantity > stockDisponible) {
-      // Opcional: Mostrar un mensaje de error
       alert(`Solo hay ${stockDisponible} unidades disponibles`);
-      // Establecer la cantidad al máximo disponible
       updateQuantity(itemId, stockDisponible);
       return;
     }
@@ -130,7 +111,6 @@ const Cart = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Lista de productos */}
           <div className="lg:col-span-2">
             <div className="bg-white shadow-lg rounded-2xl overflow-hidden">
               <div className="p-6 bg-gray-50 border-b flex items-center justify-between">
@@ -151,7 +131,6 @@ const Cart = () => {
                 {cart.map((item) => (
                   <li key={item._id} className="p-6 hover:bg-gray-50 transition-colors">
                     <div className="flex flex-col sm:flex-row items-center gap-6">
-                      {/* Imagen */}
                       <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden shadow-sm">
                         <img
                           src={item.imagenUrl || '/placeholder-product.jpg'}
@@ -159,7 +138,6 @@ const Cart = () => {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      {/* Detalles */}
                       <div className="flex-grow w-full">
                         <Link to={`/productos/${item._id}`} className="text-lg font-bold text-gray-800 hover:text-[#FFD15C] transition-colors duration-200">
                           {item.nombre}
@@ -170,7 +148,6 @@ const Cart = () => {
                           <span className="capitalize">{item.categoria}</span>
                         </div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-4">
-                          {/* Precio con descuento si corresponde */}
                           <div className="font-semibold text-lg">
                             {hasDiscount(item) ? (
                               <>
@@ -189,7 +166,6 @@ const Cart = () => {
                               </span>
                             )}
                           </div>
-                          {/* Controles de cantidad */}
                           <div className="flex items-center bg-gray-100 rounded-lg overflow-hidden shadow-inner">
                             <button
                               onClick={() => handleQuantityChange(item._id, item.cantidad - 1, item.stock)}
@@ -234,7 +210,6 @@ const Cart = () => {
                             </button>
                           </div>
                         </div>
-                        {/* Agregar indicador de stock */}
                         {item.cantidad >= item.stock && (
                           <p className="text-sm text-red-500 mt-1">
                             Stock máximo alcanzado
@@ -248,7 +223,6 @@ const Cart = () => {
             </div>
           </div>
 
-          {/* Resumen del pedido */}
           <div className="lg:col-span-1">
             <div className="bg-white shadow-lg rounded-2xl p-8 sticky top-6 animate-fadeIn">
               <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
@@ -263,7 +237,6 @@ const Cart = () => {
                   <span className="font-semibold">{formatPrice(totals.discountedTotal)}</span>
                 </div>
                 
-                {/* Mostrar ahorro total si hay productos con descuento */}
                 {totals.savings > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Ahorro total</span>

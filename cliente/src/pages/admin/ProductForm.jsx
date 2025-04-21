@@ -1,4 +1,3 @@
-// cliente/src/pages/admin/ProductForm.jsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -31,19 +30,17 @@ const ProductForm = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Opciones para categoría
   const categorias = [
     { id: 'alimentos', nombre: 'Alimentos' },
     { id: 'accesorios', nombre: 'Accesorios' },
     { id: 'higiene', nombre: 'Higiene' },
     { id: 'juguetes', nombre: 'Juguetes' },
-    { id: 'medicamentos y cuidado', nombre: 'Medicamentos y Cuidado' }, // Corregido para coincidir exactamente con el enum
+    { id: 'medicamentos y cuidado', nombre: 'Medicamentos y Cuidado' }, 
     { id: 'camas', nombre: 'Camas' },
     { id: 'transportadoras', nombre: 'Transportadoras' },
     { id: 'otros', nombre: 'Otros' }
   ];
 
-  // Opciones para tipo de mascota
   const tiposMascota = [
     { id: 'perro', nombre: 'Perro' },
     { id: 'gato', nombre: 'Gato' },
@@ -54,7 +51,6 @@ const ProductForm = () => {
     { id: 'otro', nombre: 'Otro' }
   ];
 
-  // Cargar datos del producto si estamos en modo edición
   useEffect(() => {
     const fetchProducto = async () => {
       if (!isEditMode) return;
@@ -75,7 +71,6 @@ const ProductForm = () => {
 
         const res = await axios.get(`/api/productos/${id}`, config);
 
-        // Actualizar formulario con datos del producto
         setFormData({
           nombre: res.data.data.nombre || '',
           descripcion: res.data.data.descripcion || '',
@@ -89,7 +84,6 @@ const ProductForm = () => {
           descuento: res.data.data.descuento || 0
         });
 
-        // Si hay una imagen, establecer la vista previa
         if (res.data.data.imagenUrl) {
           setImagePreview(res.data.data.imagenUrl);
         }
@@ -105,7 +99,6 @@ const ProductForm = () => {
     fetchProducto();
   }, [id, isEditMode]);
 
-  // Manejar cambios en los campos
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -114,7 +107,6 @@ const ProductForm = () => {
       [name]: type === 'checkbox' ? checked : value
     }));
 
-    // Limpiar errores cuando el usuario corrige
     if (formErrors[name]) {
       setFormErrors({
         ...formErrors,
@@ -123,14 +115,12 @@ const ProductForm = () => {
     }
   };
 
-  // Manejar selección de archivo de imagen
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     console.log("Archivo seleccionado:", file.name, file.type, file.size);
 
-    // Validar que es una imagen
     if (!file.type.match('image.*')) {
       setFormErrors({
         ...formErrors,
@@ -139,7 +129,6 @@ const ProductForm = () => {
       return;
     }
 
-    // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setFormErrors({
         ...formErrors,
@@ -148,10 +137,8 @@ const ProductForm = () => {
       return;
     }
 
-    // Guardar archivo y crear vista previa
     setImageFile(file);
 
-    // Crear vista previa
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result);
@@ -159,20 +146,17 @@ const ProductForm = () => {
     };
     reader.readAsDataURL(file);
 
-    // Limpiar errores de imagen y URL
     setFormErrors({
       ...formErrors,
       image: null
     });
 
-    // Al seleccionar un archivo, limpiar la URL de imagen para evitar conflictos
     setFormData(prevState => ({
       ...prevState,
       imagenUrl: ''
     }));
   };
 
-  // Reemplazar la función uploadImage existente con esta versión
   const uploadImage = async () => {
     if (!imageFile) {
       console.log("No hay archivo de imagen para subir");
@@ -244,7 +228,6 @@ const ProductForm = () => {
     }
   };
 
-  // Validar formulario
   const validateForm = () => {
     const errors = {};
 
@@ -264,13 +247,11 @@ const ProductForm = () => {
       errors.stock = 'Ingresa una cantidad de stock válida (0 o mayor)';
     }
 
-    // Si está en oferta, verificar que tenga descuento
     if (formData.enOferta && (!formData.descuento || isNaN(formData.descuento) ||
         parseFloat(formData.descuento) <= 0 || parseFloat(formData.descuento) > 100)) {
       errors.descuento = 'Para productos en oferta, ingresa un descuento válido entre 1 y 100';
     }
 
-    // Verificar que haya una imagen (ya sea archivo o URL)
     if (!imageFile && !formData.imagenUrl) {
       errors.image = 'Debes proporcionar una imagen del producto';
     }
@@ -279,8 +260,6 @@ const ProductForm = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Enviar formulario
-  // Enviar formulario con corrección explícita
 const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -293,7 +272,6 @@ const handleSubmit = async (e) => {
   setError(null);
 
   try {
-    // Primero subir la imagen si hay una nueva
     let imagenUrl = formData.imagenUrl;
 
     if (imageFile) {
@@ -327,48 +305,37 @@ const handleSubmit = async (e) => {
       }
     };
 
-    // CORRECCIÓN CRÍTICA: Forzar el valor correcto para la categoría de medicamentos
     let categoriaCorregida = formData.categoria;
     
-    // Si la categoría es de medicamentos, asegurarse de usar exactamente el formato correcto
     if (categoriaCorregida.toLowerCase().includes('medicamentos y')) {
       categoriaCorregida = 'medicamentos y cuidado';
-      console.log("Corrigiendo categoría a:", categoriaCorregida);
     }
 
-    // Preparar datos para enviar con la categoría corregida
     const productoData = {
       ...formData,
-      categoria: categoriaCorregida, // Usar la categoría corregida
-      imagenUrl,
+      categoria: categoriaCorregida, 
       precio: parseFloat(formData.precio),
       stock: parseInt(formData.stock),
       descuento: parseFloat(formData.descuento)
     };
 
-    console.log("Datos del producto a guardar:", productoData);
-    console.log("Valor de la categoría enviada:", productoData.categoria);
 
     let res;
     if (isEditMode) {
-      // Actualizar producto existente
       console.log(`Actualizando producto con ID: ${id}`);
       res = await axios.put(`/api/productos/${id}`, productoData, config);
     } else {
-      // Crear nuevo producto
       console.log("Creando nuevo producto");
       res = await axios.post('/api/productos', productoData, config);
     }
 
     console.log("Respuesta del servidor (guardar producto):", res.data);
 
-    // Navegar a la lista de productos después de crear/actualizar
     navigate('/admin/productos');
   } catch (err) {
     console.error('Error al guardar el producto:', err);
     console.error('Detalles del error:', err.response?.data || err.message);
     
-    // Si el error sigue siendo de validación de categoría, mostrar un mensaje más específico
     if (err.response?.data?.error?.includes('medicamentos y Cuidado')) {
       setError('Error en la categoría: Hay un problema con el formato de "Medicamentos y Cuidado". Por favor, contacte al administrador del sistema.');
     } else {
@@ -393,7 +360,6 @@ const handleSubmit = async (e) => {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {/* Nombre */}
             <div>
               <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
                 Nombre del producto *
@@ -408,8 +374,6 @@ const handleSubmit = async (e) => {
               />
               {formErrors.nombre && <p className="text-red-500 text-sm mt-1">{formErrors.nombre}</p>}
             </div>
-            
-            {/* Precio */}
             <div>
               <label htmlFor="precio" className="block text-sm font-medium text-gray-700 mb-1">
                 Precio *
@@ -429,7 +393,6 @@ const handleSubmit = async (e) => {
           </div>
           
           <div className="mb-6">
-            {/* Descripción */}
             <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
               Descripción *
             </label>
@@ -445,7 +408,6 @@ const handleSubmit = async (e) => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* Categoría */}
             <div>
               <label htmlFor="categoria" className="block text-sm font-medium text-gray-700 mb-1">
                 Categoría *
@@ -465,7 +427,6 @@ const handleSubmit = async (e) => {
               </select>
             </div>
             
-            {/* Tipo de mascota */}
             <div>
               <label htmlFor="tipoMascota" className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de mascota *
@@ -485,7 +446,6 @@ const handleSubmit = async (e) => {
               </select>
             </div>
             
-            {/* Stock */}
             <div>
               <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
                 Stock *
@@ -504,13 +464,11 @@ const handleSubmit = async (e) => {
           </div>
           
           <div className="mb-6">
-            {/* Imagen */}
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Imagen del producto *
             </label>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Área de carga */}
               <div>
                 <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 ${formErrors.image ? 'border-red-500' : 'border-gray-300'} border-dashed rounded-md`}>
                   <div className="space-y-1 text-center">
@@ -543,7 +501,6 @@ const handleSubmit = async (e) => {
                 </div>
                 {formErrors.image && <p className="text-red-500 text-sm mt-1">{formErrors.image}</p>}
                 
-                {/* Alternativa URL */}
                 <div className="mt-4">
                   <p className="text-sm text-gray-600 mb-1">O ingresa una URL de imagen:</p>
                   <input
@@ -561,7 +518,6 @@ const handleSubmit = async (e) => {
                   />
                 </div>
 
-                {/* Barra de progreso de carga */}
                 {isUploading && (
                   <div className="mt-4">
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -572,7 +528,6 @@ const handleSubmit = async (e) => {
                 )}
               </div>
               
-              {/* Vista previa de imagen */}
               <div>
                 {imagePreview ? (
                   <div className="mt-2">
@@ -591,7 +546,6 @@ const handleSubmit = async (e) => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            {/* Destacado */}
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -606,7 +560,6 @@ const handleSubmit = async (e) => {
               </label>
             </div>
             
-            {/* En oferta */}
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -621,7 +574,6 @@ const handleSubmit = async (e) => {
               </label>
             </div>
             
-            {/* Descuento */}
             <div className={formData.enOferta ? '' : 'opacity-50'}>
               <label htmlFor="descuento" className="block text-sm font-medium text-gray-700 mb-1">
                 Descuento (%)

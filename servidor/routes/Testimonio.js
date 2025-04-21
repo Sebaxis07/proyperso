@@ -4,10 +4,8 @@ import Testimonio from '../models/Testimonio.js';
 
 const router = Router();
 
-// Obtener todos los testimonios
 router.get('/', async (req, res) => {
   try {
-    // Obtener testimonios ordenados por fecha (los más recientes primero)
     const testimonios = await Testimonio.find()
       .sort({ fecha: -1 })
       .limit(10);
