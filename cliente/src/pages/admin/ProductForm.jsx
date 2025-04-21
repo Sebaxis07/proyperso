@@ -151,6 +151,7 @@ const ProductForm = () => {
       image: null
     });
 
+    // Limpiamos la URL de imagen al seleccionar un archivo
     setFormData(prevState => ({
       ...prevState,
       imagenUrl: ''
@@ -160,7 +161,11 @@ const ProductForm = () => {
   const uploadImage = async () => {
     if (!imageFile) {
       console.log("No hay archivo de imagen para subir");
-      return formData.imagenUrl;
+      // Si no hay archivo pero hay URL, devolvemos la URL limpia
+      if (formData.imagenUrl) {
+        return formData.imagenUrl.trim();
+      }
+      return '';
     }
 
     try {
@@ -176,7 +181,6 @@ const ProductForm = () => {
       const formDataObj = new FormData();
       formDataObj.append('imagen', imageFile);
 
-      // Añadir logs para verificar el FormData
       console.log("Contenido del FormData:");
       for (let [key, value] of formDataObj.entries()) {
         console.log(`${key}: ${value instanceof File ? value.name : value}`);
@@ -185,7 +189,7 @@ const ProductForm = () => {
       const config = {
         headers: {
           'Authorization': `Bearer ${token}`,
-          // No establecer 'Content-Type' - Axios lo ajustará automáticamente para FormData
+          // Importante: No establecer 'Content-Type' aquí, FormData lo configura automáticamente
         },
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -211,7 +215,7 @@ const ProductForm = () => {
       setIsUploading(false);
 
       if (response.data.success && response.data.data && response.data.data.url) {
-        return response.data.data.url;
+        return response.data.data.url.trim(); // Aseguramos que no hay espacios
       } else {
         throw new Error('No se recibió la URL de la imagen correctamente');
       }
@@ -260,91 +264,111 @@ const ProductForm = () => {
     return Object.keys(errors).length === 0;
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!validateForm()) {
-    console.log("Formulario inválido. Errores:", formErrors);
-    return;
-  }
+    if (!validateForm()) {
+      console.log("Formulario inválido. Errores:", formErrors);
+      return;
+    }
 
-  setIsSubmitting(true);
-  setError(null);
+    setIsSubmitting(true);
+    setError(null);
 
-  try {
-    let imagenUrl = formData.imagenUrl;
+    try {
+      let imagenUrl = formData.imagenUrl ? formData.imagenUrl.trim() : '';
 
-    if (imageFile) {
-      console.log("Subiendo nueva imagen");
-      const imageUrl = await uploadImage();
+      if (imageFile) {
+        console.log("Subiendo nueva imagen");
+        imagenUrl = await uploadImage();
 
-      if (!imageUrl) {
-        throw new Error('Error al subir la imagen');
+        if (!imagenUrl) {
+          throw new Error('Error al subir la imagen');
+        }
+
+        console.log("Imagen subida exitosamente:", imagenUrl);
+      } else {
+        console.log("Usando URL de imagen existente:", imagenUrl);
       }
 
-      imagenUrl = imageUrl;
-      console.log("Imagen subida exitosamente:", imagenUrl);
-    } else {
-      console.log("Usando URL de imagen existente:", imagenUrl);
-    }
-
-    if (!imagenUrl) {
-      throw new Error('No se ha proporcionado una imagen para el producto');
-    }
-
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No estás autenticado');
-    }
-
-    const config = {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+      if (!imagenUrl) {
+        throw new Error('No se ha proporcionado una imagen para el producto');
       }
-    };
 
-    let categoriaCorregida = formData.categoria;
-    
-    if (categoriaCorregida.toLowerCase().includes('medicamentos y')) {
-      categoriaCorregida = 'medicamentos y cuidado';
+      // Asegurar que la URL comienza con http o https
+      if (!imagenUrl.startsWith('http://') && !imagenUrl.startsWith('https://')) {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        imagenUrl = imagenUrl.startsWith('/') 
+          ? `${baseUrl}${imagenUrl}` 
+          : `${baseUrl}/${imagenUrl}`;
+      }
+
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('No estás autenticado');
+      }
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      let categoriaCorregida = formData.categoria;
+      
+      if (categoriaCorregida.toLowerCase().includes('medicamentos y')) {
+        categoriaCorregida = 'medicamentos y cuidado';
+      }
+
+      const productoData = {
+        ...formData,
+        imagenUrl: imagenUrl, // Aseguramos que usamos la URL procesada
+        categoria: categoriaCorregida, 
+        precio: parseFloat(formData.precio),
+        stock: parseInt(formData.stock),
+        descuento: parseFloat(formData.descuento)
+      };
+
+      console.log("Datos del producto a guardar:", productoData);
+
+      let res;
+      if (isEditMode) {
+        console.log(`Actualizando producto con ID: ${id}`);
+        res = await axios.put(`/api/productos/${id}`, productoData, config);
+      } else {
+        console.log("Creando nuevo producto");
+        res = await axios.post('/api/productos', productoData, config);
+      }
+
+      console.log("Respuesta del servidor (guardar producto):", res.data);
+
+      // Actualizamos el caché para otros componentes (opcional)
+      if (window.localStorage) {
+        window.localStorage.setItem('productsLastUpdated', Date.now().toString());
+      }
+
+      // Forzamos una actualización completa al navegar de vuelta a la lista
+      localStorage.setItem('forceProductsRefresh', 'true');
+      navigate('/admin/productos');
+      
+      // Opcional: Si los problemas persisten, puedes forzar un refresco completo
+      // setTimeout(() => window.location.href = '/admin/productos', 100);
+    } catch (err) {
+      console.error('Error al guardar el producto:', err);
+      console.error('Detalles del error:', err.response?.data || err.message);
+      
+      if (err.response?.data?.error?.includes('medicamentos y Cuidado')) {
+        setError('Error en la categoría: Hay un problema con el formato de "Medicamentos y Cuidado". Por favor, contacte al administrador del sistema.');
+      } else {
+        setError(err.response?.data?.msg || `Error al guardar el producto: ${err.message}`);
+      }
+      
+      setIsSubmitting(false);
     }
+  };
 
-    const productoData = {
-      ...formData,
-      categoria: categoriaCorregida, 
-      precio: parseFloat(formData.precio),
-      stock: parseInt(formData.stock),
-      descuento: parseFloat(formData.descuento)
-    };
-
-
-    let res;
-    if (isEditMode) {
-      console.log(`Actualizando producto con ID: ${id}`);
-      res = await axios.put(`/api/productos/${id}`, productoData, config);
-    } else {
-      console.log("Creando nuevo producto");
-      res = await axios.post('/api/productos', productoData, config);
-    }
-
-    console.log("Respuesta del servidor (guardar producto):", res.data);
-
-    navigate('/admin/productos');
-  } catch (err) {
-    console.error('Error al guardar el producto:', err);
-    console.error('Detalles del error:', err.response?.data || err.message);
-    
-    if (err.response?.data?.error?.includes('medicamentos y Cuidado')) {
-      setError('Error en la categoría: Hay un problema con el formato de "Medicamentos y Cuidado". Por favor, contacte al administrador del sistema.');
-    } else {
-      setError(err.response?.data?.msg || `Error al guardar el producto: ${err.message}`);
-    }
-    
-    setIsSubmitting(false);
-  }
-};
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-6">
@@ -533,7 +557,15 @@ const handleSubmit = async (e) => {
                   <div className="mt-2">
                     <p className="text-sm text-gray-600 mb-1">Vista previa:</p>
                     <div className="border rounded-md overflow-hidden h-48 flex items-center justify-center bg-gray-50">
-                      <img src={imagePreview} alt="Vista previa" className="max-h-full max-w-full object-contain" />
+                      <img 
+                        src={imagePreview} 
+                        alt="Vista previa" 
+                        className="max-h-full max-w-full object-contain" 
+                        onError={(e) => {
+                          console.error("Error al cargar la imagen de vista previa");
+                          e.target.src = 'https://via.placeholder.com/150?text=Error+de+imagen';
+                        }}
+                      />
                     </div>
                   </div>
                 ) : (
