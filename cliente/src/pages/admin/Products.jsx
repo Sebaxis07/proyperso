@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { getFullImageUrl } from '../../utils/imageUtils';
 
 const AdminProducts = () => {
   const [productos, setProductos] = useState([]);
@@ -213,8 +214,12 @@ const AdminProducts = () => {
                         <div className="h-10 w-10 flex-shrink-0">
                           <img
                             className="h-10 w-10 rounded-sm object-cover"
-                            src={producto.imagenUrl || '/placeholder-product.jpg'}
+                            src={getFullImageUrl(producto)}
                             alt={producto.nombre}
+                            onError={(e) => {
+                              console.error("Error al cargar la imagen");
+                              e.target.src = '/placeholder-product.jpg';
+                            }}
                           />
                         </div>
                         <div className="ml-4">

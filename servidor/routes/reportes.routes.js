@@ -1,601 +1,540 @@
 import { Router } from 'express';
-import { protect, authorize } from '../middleware/auth.js';
-import Pedido from '../models/Pedido.js';
+import { protect } from '../middleware/auth.js';
+import { isAdmin } from '../middleware/admin.js';
 import Usuario from '../models/Usuario.js';
-import Producto from '../models/Producto.js';
+import Pedido from '../models/Pedido.js';
 
 const router = Router();
 
-// Protect all routes in this router
-router.use(protect, authorize('admin'));
-
-/**
- * @route   GET /api/reportes/mensual
- * @desc    Obtiene reporte mensual completo
- * @access  Admin
- */
-router.get('/mensual', async (req, res) => {
+// @route   GET /api/reportes/mensual
+// @desc    Obtener reporte mensual
+// @access  Private/Admin
+router.get('/mensual', [protect, isAdmin], async (req, res) => {
   try {
-    // Obtener mes y año de los query params o usar el mes actual
     const { mes, anio } = req.query;
-    const fechaReporte = new Date();
-    
-    // Si se especifican mes y año, usarlos
-    if (mes && anio) {
-      fechaReporte.setMonth(parseInt(mes) - 1); // Restar 1 porque los meses en JS van de 0-11
-      fechaReporte.setFullYear(parseInt(anio));
-    }
-    
-    const mesReporte = fechaReporte.getMonth();
-    const anioReporte = fechaReporte.getFullYear();
-    
-    // Calcular fechas de inicio y fin del mes
-    const fechaInicio = new Date(anioReporte, mesReporte, 1);
-    const fechaFin = new Date(anioReporte, mesReporte + 1, 0, 23, 59, 59); // Último día del mes
-    
-    // Calcular fechas para el mes anterior (para comparativas)
-    const mesAnterior = mesReporte === 0 ? 11 : mesReporte - 1;
-    const anioMesAnterior = mesReporte === 0 ? anioReporte - 1 : anioReporte;
-    const fechaInicioMesAnterior = new Date(anioMesAnterior, mesAnterior, 1);
-    const fechaFinMesAnterior = new Date(anioMesAnterior, mesAnterior + 1, 0, 23, 59, 59);
-    
-    // 1. Obtener todos los pedidos del mes
-    const pedidosMes = await Pedido.find({
-      fechaCreacion: { $gte: fechaInicio, $lte: fechaFin }
-    })
-    .populate('usuario', 'nombre email')
-    .populate('items.producto', 'nombre precio');
-    
-    // 2. Obtener pedidos del mes anterior (para comparativas)
-    const pedidosMesAnterior = await Pedido.find({
-      fechaCreacion: { $gte: fechaInicioMesAnterior, $lte: fechaFinMesAnterior }
-    });
-    
-    // 3. Obtener usuarios nuevos del mes
-    const usuariosNuevosMes = await Usuario.find({
-      fechaCreacion: { $gte: fechaInicio, $lte: fechaFin }
-    }).countDocuments();
-    
-    // 4. Calcular métricas generales
-    const ventasMes = pedidosMes.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
-    const ventasMesAnterior = pedidosMesAnterior.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
-    const cantidadPedidos = pedidosMes.length;
-    const ticketPromedio = cantidadPedidos > 0 ? ventasMes / cantidadPedidos : 0;
-    
-    // Calcular variación porcentual respecto al mes anterior
-    let variacionVentas = 0;
-    if (ventasMesAnterior > 0) {
-      variacionVentas = ((ventasMes - ventasMesAnterior) / ventasMesAnterior) * 100;
-    }
-    
-    // 5. Calcular ventas por día del mes
-    const ventasPorDia = {};
-    const diasDelMes = fechaFin.getDate();
-    
-    // Inicializar todos los días del mes
-    for (let i = 1; i <= diasDelMes; i++) {
-      ventasPorDia[i] = { ventas: 0, pedidos: 0 };
-    }
-    
-    // Agrupar ventas por día
-    pedidosMes.forEach(pedido => {
-      const dia = new Date(pedido.fechaCreacion).getDate();
-      ventasPorDia[dia].ventas += pedido.precioTotal || 0;
-      ventasPorDia[dia].pedidos += 1;
-    });
-    
-    // Convertir a formato para gráficos
-    const dataVentasDiarias = Object.entries(ventasPorDia).map(([dia, datos]) => ({
-      dia: parseInt(dia),
-      ventas: datos.ventas,
-      pedidos: datos.pedidos
-    }));
-    
-    // 6. Calcular productos más vendidos
-    const productosMasVendidos = {};
-    
-    pedidosMes.forEach(pedido => {
-      if (pedido.items && Array.isArray(pedido.items)) {
-        pedido.items.forEach(item => {
-          const productoId = item.producto?._id || item.productoId;
-          const nombre = item.producto?.nombre || 'Producto';
-          const cantidad = item.cantidad || 1;
-          const precio = item.precio || 0;
-          
-          if (!productosMasVendidos[productoId]) {
-            productosMasVendidos[productoId] = {
-              id: productoId,
-              nombre,
-              cantidad: 0,
-              ingresos: 0
-            };
-          }
-          
-          productosMasVendidos[productoId].cantidad += cantidad;
-          productosMasVendidos[productoId].ingresos += precio * cantidad;
-        });
-      }
-    });
-    
-    // Convertir a array y ordenar por cantidad
-    const topProductos = Object.values(productosMasVendidos)
-      .sort((a, b) => b.cantidad - a.cantidad);
-    
-    // 7. Calcular distribución por estado de pedido
-    const pedidosPorEstado = {
-      pendiente: 0,
-      pagado: 0,
-      enviado: 0,
-      entregado: 0,
-      cancelado: 0
-    };
-    
-    pedidosMes.forEach(pedido => {
-      const estado = pedido.estadoPedido || 'pendiente';
-      if (pedidosPorEstado.hasOwnProperty(estado)) {
-        pedidosPorEstado[estado] += 1;
-      }
-    });
-    
-    // Convertir a formato para gráficos
-    const dataEstadoPedidos = Object.entries(pedidosPorEstado).map(([estado, cantidad]) => ({
-      estado,
-      cantidad
-    }));
-    
-    // 8. Métodos de pago utilizados
-    const metodosPago = {};
-    
-    pedidosMes.forEach(pedido => {
-      const metodo = pedido.metodoPago || 'No especificado';
-      
-      if (!metodosPago[metodo]) {
-        metodosPago[metodo] = {
-          metodo,
-          cantidad: 0,
-          total: 0
-        };
-      }
-      
-      metodosPago[metodo].cantidad += 1;
-      metodosPago[metodo].total += pedido.precioTotal || 0;
-    });
-    
-    const dataMetodosPago = Object.values(metodosPago);
-    
-    // Preparar respuesta con todos los datos del reporte
-    const reporte = {
-      periodo: {
-        mes: mesReporte + 1, // Sumar 1 para formato común (1-12)
-        anio: anioReporte,
-        nombreMes: fechaInicio.toLocaleString('es', { month: 'long' })
-      },
-      metricas: {
-        ventasTotales: ventasMes,
-        cantidadPedidos,
-        ticketPromedio,
-        usuariosNuevos: usuariosNuevosMes,
-        comparacionMesAnterior: {
-          ventasMesAnterior,
-          variacionPorcentual: variacionVentas
-        }
-      },
-      graficos: {
-        ventasDiarias: dataVentasDiarias,
-        productosMasVendidos: topProductos,
-        estadoPedidos: dataEstadoPedidos,
-        metodosPago: dataMetodosPago
-      },
-      detallePedidos: pedidosMes.map(pedido => ({
-        id: pedido._id,
-        fecha: pedido.fechaCreacion,
-        cliente: pedido.usuario ? `${pedido.usuario.nombre} (${pedido.usuario.email})` : 'Cliente',
-        total: pedido.precioTotal,
-        estado: pedido.estadoPedido,
-        metodoPago: pedido.metodoPago
-      }))
-    };
-    
-    res.json({
-      success: true,
-      data: reporte
-    });
-    
-  } catch (error) {
-    console.error('Error al generar reporte mensual:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al generar el reporte mensual',
-      error: error.message
-    });
-  }
-});
-
-/**
- * @route   GET /api/reportes/ventas-por-periodo
- * @desc    Obtiene ventas por periodo (día, semana, mes, año)
- * @access  Admin
- */
-router.get('/ventas-por-periodo', async (req, res) => {
-  try {
-    const { periodo, fechaInicio, fechaFin } = req.query;
     
     // Validar parámetros
-    if (!periodo) {
-      return res.status(400).json({
-        success: false,
-        message: 'Se requiere especificar un periodo (dia, semana, mes, anio)'
+    if (!mes || !anio) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Se requieren los parámetros mes y año' 
       });
     }
     
-    // Calcular fechas de inicio y fin según el periodo
-    let inicio, fin;
-    const ahora = new Date();
+    // Convertir a números
+    const mesNum = parseInt(mes);
+    const anioNum = parseInt(anio);
     
-    if (fechaInicio && fechaFin) {
-      // Si se proporcionan fechas específicas
-      inicio = new Date(fechaInicio);
-      fin = new Date(fechaFin);
-      fin.setHours(23, 59, 59, 999);
-    } else {
-      // Configurar fechas según el periodo seleccionado
-      switch (periodo) {
-        case 'dia':
-          inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0, 0);
-          fin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 23, 59, 59);
-          break;
-        case 'semana':
-          const diaSemana = ahora.getDay(); // 0 = domingo, 6 = sábado
-          const diferenciaDias = diaSemana === 0 ? 6 : diaSemana - 1; // Lunes como primer día
-          inicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - diferenciaDias, 0, 0, 0);
-          fin = new Date(inicio);
-          fin.setDate(fin.getDate() + 6);
-          fin.setHours(23, 59, 59, 999);
-          break;
-        case 'mes':
-          inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
-          fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
-          break;
-        case 'anio':
-          inicio = new Date(ahora.getFullYear(), 0, 1, 0, 0, 0);
-          fin = new Date(ahora.getFullYear(), 11, 31, 23, 59, 59);
-          break;
-        default:
-          return res.status(400).json({
-            success: false,
-            message: 'Periodo no válido. Use: dia, semana, mes, anio'
-          });
-      }
-    }
+    // Calcular fechas de inicio y fin del mes
+    const fechaInicio = new Date(anioNum, mesNum - 1, 1);
+    const fechaFin = new Date(anioNum, mesNum, 0, 23, 59, 59, 999);
     
-    // Obtener pedidos en el rango de fechas
+    // Obtener pedidos del mes
     const pedidos = await Pedido.find({
-      fechaCreacion: { $gte: inicio, $lte: fin }
-    }).sort({ fechaCreacion: 1 });
+      fechaCreacion: {
+        $gte: fechaInicio,
+        $lte: fechaFin
+      }
+    }).populate('productos.producto');
     
-    // Calcular ventas totales
-    const ventasTotales = pedidos.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
+    // Obtener pedidos del mes anterior para comparación
+    const mesAnterior = mesNum === 1 ? 12 : mesNum - 1;
+    const anioAnterior = mesNum === 1 ? anioNum - 1 : anioNum;
+    const fechaInicioAnterior = new Date(anioAnterior, mesAnterior - 1, 1);
+    const fechaFinAnterior = new Date(anioAnterior, mesAnterior, 0, 23, 59, 59, 999);
     
-    // Procesar datos según el periodo para gráficas
-    let datosAgrupados = [];
-    
-    if (periodo === 'dia') {
-      // Agrupar por hora
-      const ventasPorHora = Array(24).fill().map((_, i) => ({
-        hora: i,
-        ventas: 0,
-        pedidos: 0
-      }));
-      
-      pedidos.forEach(pedido => {
-        const hora = new Date(pedido.fechaCreacion).getHours();
-        ventasPorHora[hora].ventas += pedido.precioTotal || 0;
-        ventasPorHora[hora].pedidos += 1;
-      });
-      
-      datosAgrupados = ventasPorHora;
-    } else if (periodo === 'semana') {
-      // Agrupar por día de la semana
-      const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-      const ventasPorDia = diasSemana.map(dia => ({
-        dia,
-        ventas: 0,
-        pedidos: 0
-      }));
-      
-      pedidos.forEach(pedido => {
-        const fecha = new Date(pedido.fechaCreacion);
-        // getDay() retorna 0 para domingo, 6 para sábado
-        // Ajustar para que lunes sea 0, domingo sea 6
-        const diaSemana = fecha.getDay() === 0 ? 6 : fecha.getDay() - 1;
-        
-        ventasPorDia[diaSemana].ventas += pedido.precioTotal || 0;
-        ventasPorDia[diaSemana].pedidos += 1;
-      });
-      
-      datosAgrupados = ventasPorDia;
-    } else if (periodo === 'mes') {
-      // Agrupar por día del mes
-      const diasMes = fin.getDate();
-      const ventasPorDia = Array(diasMes).fill().map((_, i) => ({
-        dia: i + 1,
-        ventas: 0,
-        pedidos: 0
-      }));
-      
-      pedidos.forEach(pedido => {
-        const dia = new Date(pedido.fechaCreacion).getDate() - 1; // Restar 1 para índice de array (0-based)
-        ventasPorDia[dia].ventas += pedido.precioTotal || 0;
-        ventasPorDia[dia].pedidos += 1;
-      });
-      
-      datosAgrupados = ventasPorDia;
-    } else if (periodo === 'anio') {
-      // Agrupar por mes
-      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-      const ventasPorMes = meses.map((mes, index) => ({
-        mes,
-        ventas: 0,
-        pedidos: 0,
-        indice: index
-      }));
-      
-      pedidos.forEach(pedido => {
-        const mes = new Date(pedido.fechaCreacion).getMonth();
-        ventasPorMes[mes].ventas += pedido.precioTotal || 0;
-        ventasPorMes[mes].pedidos += 1;
-      });
-      
-      datosAgrupados = ventasPorMes;
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        periodo,
-        fechaInicio: inicio,
-        fechaFin: fin,
-        ventasTotales,
-        cantidadPedidos: pedidos.length,
-        datosAgrupados
+    const pedidosAnterior = await Pedido.find({
+      fechaCreacion: {
+        $gte: fechaInicioAnterior,
+        $lte: fechaFinAnterior
       }
     });
     
-  } catch (error) {
-    console.error('Error al generar reporte de ventas por periodo:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al generar el reporte de ventas',
-      error: error.message
+    // Calcular métricas
+    const totalVentas = pedidos.reduce((sum, p) => sum + p.total, 0);
+    const totalVentasAnterior = pedidosAnterior.reduce((sum, p) => sum + p.total, 0);
+    const porcentajeCambioVentas = totalVentasAnterior > 0 
+      ? ((totalVentas - totalVentasAnterior) / totalVentasAnterior) * 100 
+      : 0;
+    
+    // Calcular ventas diarias
+    const ventasDiarias = [];
+    const diasEnMes = fechaFin.getDate();
+    
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+      const fecha = new Date(anioNum, mesNum - 1, dia);
+      const ventasDelDia = pedidos.filter(p => {
+        const pedidoDate = new Date(p.fechaCreacion);
+        return pedidoDate.getDate() === fecha.getDate();
+      }).reduce((sum, p) => sum + p.total, 0);
+      
+      ventasDiarias.push({
+        dia,
+        monto: ventasDelDia
+      });
+    }
+    
+    // Calcular top productos
+    const productosVendidos = {};
+    pedidos.forEach(pedido => {
+      pedido.productos.forEach(item => {
+        const idProducto = item.producto._id.toString();
+        if (!productosVendidos[idProducto]) {
+          productosVendidos[idProducto] = {
+            id: idProducto,
+            nombre: item.producto.nombre,
+            ventas: 0
+          };
+        }
+        productosVendidos[idProducto].ventas += item.cantidad * item.precio;
+      });
+    });
+    
+    const topProductos = Object.values(productosVendidos)
+      .sort((a, b) => b.ventas - a.ventas)
+      .slice(0, 5);
+    
+    // Calcular ventas por categoría
+    const ventasPorCategoria = [];
+    const categorias = {};
+    
+    pedidos.forEach(pedido => {
+      pedido.productos.forEach(item => {
+        const categoria = item.producto.categoria;
+        if (!categorias[categoria]) {
+          categorias[categoria] = 0;
+        }
+        categorias[categoria] += item.cantidad * item.precio;
+      });
+    });
+    
+    for (const [categoria, monto] of Object.entries(categorias)) {
+      ventasPorCategoria.push({
+        categoria,
+        monto
+      });
+    }
+    
+    // Obtener nuevos clientes en el mes
+    const nuevosClientes = await Usuario.countDocuments({
+      fechaRegistro: {
+        $gte: fechaInicio,
+        $lte: fechaFin
+      }
+    });
+    
+    const nuevosClientesAnterior = await Usuario.countDocuments({
+      fechaRegistro: {
+        $gte: fechaInicioAnterior,
+        $lte: fechaFinAnterior
+      }
+    });
+    
+    const porcentajeCambioClientes = nuevosClientesAnterior > 0 
+      ? ((nuevosClientes - nuevosClientesAnterior) / nuevosClientesAnterior) * 100 
+      : 0;
+    
+    // Preparar nombres de meses
+    const nombresMeses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    // Construir respuesta
+    const reporte = {
+      periodo: {
+        mes: mesNum,
+        anio: anioNum,
+        nombreMes: nombresMeses[mesNum - 1]
+      },
+      ventas: {
+        total: totalVentas,
+        porcentajeCambio: porcentajeCambioVentas.toFixed(2)
+      },
+      pedidos: {
+        total: pedidos.length,
+        porcentajeCambio: pedidosAnterior.length > 0 
+          ? (((pedidos.length - pedidosAnterior.length) / pedidosAnterior.length) * 100).toFixed(2) 
+          : 0
+      },
+      ticketPromedio: {
+        valor: pedidos.length > 0 ? totalVentas / pedidos.length : 0,
+        porcentajeCambio: pedidosAnterior.length > 0 
+          ? ((totalVentas / pedidos.length - totalVentasAnterior / pedidosAnterior.length) / (totalVentasAnterior / pedidosAnterior.length) * 100).toFixed(2) 
+          : 0
+      },
+      nuevosClientes: {
+        total: nuevosClientes,
+        porcentajeCambio: porcentajeCambioClientes.toFixed(2)
+      },
+      ventasDiarias,
+      topProductos,
+      ventasPorCategoria
+    };
+    
+    res.json({ success: true, data: reporte });
+  } catch (err) {
+    console.error('Error en reporte mensual:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al generar el reporte mensual',
+      error: err.message
     });
   }
 });
 
-/**
- * @route   GET /api/reportes/productos
- * @desc    Obtiene reportes de productos
- * @access  Admin
- */
-router.get('/productos', async (req, res) => {
+// @route   GET /api/reportes/ventas-por-periodo
+// @desc    Obtener reporte de ventas por periodo
+// @access  Private/Admin
+router.get('/ventas-por-periodo', [protect, isAdmin], async (req, res) => {
   try {
-    const { periodo } = req.query;
-    let fechaInicio, fechaFin;
-    const ahora = new Date();
+    const { fechaInicio, fechaFin } = req.query;
     
-    // Configurar periodo de tiempo para el reporte
-    if (req.query.fechaInicio && req.query.fechaFin) {
-      fechaInicio = new Date(req.query.fechaInicio);
-      fechaFin = new Date(req.query.fechaFin);
-      fechaFin.setHours(23, 59, 59, 999);
-    } else {
-      // Por defecto, reporte del mes actual
-      fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-      fechaFin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+    // Validar parámetros
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Se requieren fechas de inicio y fin' 
+      });
     }
     
-    // Obtener pedidos en el rango de fechas
-    const pedidos = await Pedido.find({
-      fechaCreacion: { $gte: fechaInicio, $lte: fechaFin }
-    }).populate('items.producto', 'nombre precio categoria stock');
+    // Convertir a fechas
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    fin.setHours(23, 59, 59, 999);
     
-    // Procesar datos de productos
+    // Obtener pedidos del periodo
+    const pedidos = await Pedido.find({
+      fechaCreacion: {
+        $gte: inicio,
+        $lte: fin
+      }
+    }).populate('productos.producto');
+    
+    // Calcular ventas por día de la semana
+    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const ventasPorDiaSemana = diasSemana.map(dia => ({ 
+      dia, 
+      monto: 0, 
+      cantidad: 0 
+    }));
+    
+    pedidos.forEach(pedido => {
+      const diaSemana = new Date(pedido.fechaCreacion).getDay();
+      ventasPorDiaSemana[diaSemana].monto += pedido.total;
+      ventasPorDiaSemana[diaSemana].cantidad += 1;
+    });
+    
+    // Calcular ventas por hora
+    const ventasPorHora = Array.from({ length: 24 }, (_, i) => ({ 
+      hora: i, 
+      monto: 0, 
+      cantidad: 0 
+    }));
+    
+    pedidos.forEach(pedido => {
+      const hora = new Date(pedido.fechaCreacion).getHours();
+      ventasPorHora[hora].monto += pedido.total;
+      ventasPorHora[hora].cantidad += 1;
+    });
+    
+    // Calcular ventas por método de pago
+    const ventasPorMetodoPago = [];
+    const metodosPago = {};
+    
+    pedidos.forEach(pedido => {
+      const metodo = pedido.metodoPago;
+      if (!metodosPago[metodo]) {
+        metodosPago[metodo] = { monto: 0, cantidad: 0 };
+      }
+      metodosPago[metodo].monto += pedido.total;
+      metodosPago[metodo].cantidad += 1;
+    });
+    
+    for (const [metodo, datos] of Object.entries(metodosPago)) {
+      ventasPorMetodoPago.push({
+        metodo,
+        monto: datos.monto,
+        cantidad: datos.cantidad
+      });
+    }
+    
+    // Preparar nombres de meses
+    const nombresMeses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    // Construir respuesta
+    const reporte = {
+      periodo: {
+        fechaInicio: inicio,
+        fechaFin: fin,
+        mes: inicio.getMonth() + 1,
+        anio: inicio.getFullYear(),
+        nombreMes: nombresMeses[inicio.getMonth()]
+      },
+      ventasPorDiaSemana,
+      ventasPorHora,
+      ventasPorMetodoPago
+    };
+    
+    res.json({ success: true, data: reporte });
+  } catch (err) {
+    console.error('Error en reporte de ventas por periodo:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al generar el reporte de ventas',
+      error: err.message 
+    });
+  }
+});
+
+// @route   GET /api/reportes/productos
+// @desc    Obtener reporte de productos
+// @access  Private/Admin
+router.get('/productos', [protect, isAdmin], async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    
+    // Validar parámetros
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Se requieren fechas de inicio y fin' 
+      });
+    }
+    
+    // Convertir a fechas
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    fin.setHours(23, 59, 59, 999);
+    
+    // Obtener pedidos del periodo
+    const pedidos = await Pedido.find({
+      fechaCreacion: {
+        $gte: inicio,
+        $lte: fin
+      }
+    }).populate('productos.producto');
+    
+    // Calcular productos más vendidos
     const productosVendidos = {};
     
     pedidos.forEach(pedido => {
-      if (pedido.items && Array.isArray(pedido.items)) {
-        pedido.items.forEach(item => {
-          const productoId = item.producto?._id || item.productoId;
-          
-          if (!productoId) return;
-          
-          if (!productosVendidos[productoId]) {
-            productosVendidos[productoId] = {
-              id: productoId,
-              nombre: item.producto?.nombre || 'Producto',
-              categoria: item.producto?.categoria || 'Sin categoría',
-              precio: item.producto?.precio || item.precio || 0,
-              stock: item.producto?.stock || 0,
-              cantidad: 0,
-              ingresos: 0,
-              aparicionesEnPedidos: 0
-            };
-          }
-          
-          productosVendidos[productoId].cantidad += item.cantidad || 1;
-          productosVendidos[productoId].ingresos += (item.precio || productosVendidos[productoId].precio) * (item.cantidad || 1);
-          productosVendidos[productoId].aparicionesEnPedidos += 1;
-        });
-      }
+      pedido.productos.forEach(item => {
+        const idProducto = item.producto._id.toString();
+        
+        if (!productosVendidos[idProducto]) {
+          productosVendidos[idProducto] = {
+            id: idProducto,
+            nombre: item.producto.nombre,
+            categoria: item.producto.categoria,
+            unidades: 0,
+            ventas: 0,
+            costo: item.producto.precio * 0.6 // Simulación de costo (60% del precio)
+          };
+        }
+        
+        productosVendidos[idProducto].unidades += item.cantidad;
+        productosVendidos[idProducto].ventas += item.cantidad * item.precio;
+      });
     });
     
-    // Convertir a array y calcular datos adicionales
-    let listaProductos = Object.values(productosVendidos);
+    const productosMasVendidos = Object.values(productosVendidos)
+      .sort((a, b) => b.unidades - a.unidades)
+      .slice(0, 10);
     
-    // Calcular popularidad (apariciones / total de pedidos)
-    const totalPedidos = pedidos.length;
-    listaProductos = listaProductos.map(producto => ({
-      ...producto,
-      popularidad: totalPedidos > 0 ? (producto.aparicionesEnPedidos / totalPedidos) * 100 : 0
-    }));
-    
-    // Ordenar por cantidad vendida
-    listaProductos.sort((a, b) => b.cantidad - a.cantidad);
-    
-    // Agrupar por categoría
-    const ventasPorCategoria = {};
-    
-    listaProductos.forEach(producto => {
-      const categoria = producto.categoria;
-      
-      if (!ventasPorCategoria[categoria]) {
-        ventasPorCategoria[categoria] = {
-          categoria,
-          cantidad: 0,
-          ingresos: 0
+    // Calcular rentabilidad
+    const productosPorRentabilidad = Object.values(productosVendidos)
+      .map(p => {
+        const costo = p.costo * p.unidades;
+        const margenTotal = p.ventas - costo;
+        const rentabilidad = costo > 0 ? (margenTotal / costo) * 100 : 0;
+        
+        return {
+          ...p,
+          margenTotal,
+          rentabilidad: parseFloat(rentabilidad.toFixed(2))
         };
-      }
-      
-      ventasPorCategoria[categoria].cantidad += producto.cantidad;
-      ventasPorCategoria[categoria].ingresos += producto.ingresos;
-    });
+      })
+      .sort((a, b) => b.rentabilidad - a.rentabilidad)
+      .slice(0, 10);
     
-    // Convertir a array y ordenar por ingresos
-    const categorias = Object.values(ventasPorCategoria).sort((a, b) => b.ingresos - a.ingresos);
+    // Simulación de rotación de inventario
+    // En un caso real necesitarías datos históricos de inventario
+    const rotacionInventario = Object.values(productosVendidos)
+      .map(p => {
+        // Valores de ejemplo - reemplazar con datos reales
+        const inventarioInicial = Math.floor(Math.random() * 100) + 50;
+        const stockActual = Math.max(0, inventarioInicial - p.unidades);
+        const rotacion = p.unidades / ((inventarioInicial + stockActual) / 2);
+        
+        return {
+          nombre: p.nombre,
+          inventarioInicial,
+          ventas: p.unidades,
+          stockActual,
+          rotacion: isNaN(rotacion) ? 0 : rotacion
+        };
+      })
+      .sort((a, b) => b.rotacion - a.rotacion)
+      .slice(0, 10);
     
-    res.json({
-      success: true,
-      data: {
-        periodo: {
-          fechaInicio,
-          fechaFin
-        },
-        resumen: {
-          totalProductosVendidos: listaProductos.reduce((sum, p) => sum + p.cantidad, 0),
-          ingresosGenerados: listaProductos.reduce((sum, p) => sum + p.ingresos, 0),
-          productosDistintos: listaProductos.length
-        },
-        productos: listaProductos,
-        categorias
-      }
-    });
+    // Preparar nombres de meses
+    const nombresMeses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
     
-  } catch (error) {
-    console.error('Error al generar reporte de productos:', error);
-    res.status(500).json({
-      success: false,
+    // Construir respuesta
+    const reporte = {
+      periodo: {
+        fechaInicio: inicio,
+        fechaFin: fin,
+        mes: inicio.getMonth() + 1,
+        anio: inicio.getFullYear(),
+        nombreMes: nombresMeses[inicio.getMonth()]
+      },
+      productosMasVendidos,
+      productosPorRentabilidad,
+      rotacionInventario
+    };
+    
+    res.json({ success: true, data: reporte });
+  } catch (err) {
+    console.error('Error en reporte de productos:', err);
+    res.status(500).json({ 
+      success: false, 
       message: 'Error al generar el reporte de productos',
-      error: error.message
+      error: err.message 
     });
   }
 });
 
-/**
- * @route   GET /api/reportes/clientes
- * @desc    Obtiene reportes de clientes
- * @access  Admin
- */
-router.get('/clientes', async (req, res) => {
+// @route   GET /api/reportes/clientes
+// @desc    Obtener reporte de clientes
+// @access  Private/Admin
+router.get('/clientes', [protect, isAdmin], async (req, res) => {
   try {
-    const { periodo } = req.query;
-    let fechaInicio, fechaFin;
-    const ahora = new Date();
+    const { fechaInicio, fechaFin } = req.query;
     
-    // Configurar periodo de tiempo para el reporte
-    if (req.query.fechaInicio && req.query.fechaFin) {
-      fechaInicio = new Date(req.query.fechaInicio);
-      fechaFin = new Date(req.query.fechaFin);
-      fechaFin.setHours(23, 59, 59, 999);
-    } else {
-      // Por defecto, reporte del mes actual
-      fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-      fechaFin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+    // Validar parámetros
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Se requieren fechas de inicio y fin' 
+      });
     }
     
-    // Obtener pedidos en el rango de fechas con información de usuarios
+    // Convertir a fechas
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    fin.setHours(23, 59, 59, 999);
+    
+    // Obtener pedidos del periodo
     const pedidos = await Pedido.find({
-      fechaCreacion: { $gte: fechaInicio, $lte: fechaFin }
-    }).populate('usuario', 'nombre email fechaCreacion');
+      fechaCreacion: {
+        $gte: inicio,
+        $lte: fin
+      }
+    }).populate('usuario', 'nombre email');
     
-    // Obtener nuevos usuarios en el rango de fechas
-    const nuevosUsuarios = await Usuario.find({
-      fechaCreacion: { $gte: fechaInicio, $lte: fechaFin }
-    }).countDocuments();
+    // Clientes totales en el periodo
+    const clientesUnicos = new Set(pedidos.map(p => p.usuario._id.toString()));
+    const clientesTotales = clientesUnicos.size;
     
-    // Procesar datos de clientes
-    const clientesActivos = {};
+    // Nuevos clientes (simulación)
+    // En un caso real consultarías la fecha de registro
+    const nuevosClientes = await Usuario.countDocuments({
+      fechaRegistro: {
+        $gte: inicio,
+        $lte: fin
+      }
+    });
+    
+    // Valor cliente promedio
+    const totalVentas = pedidos.reduce((sum, p) => sum + p.total, 0);
+    const valorClientePromedio = clientesTotales > 0 ? totalVentas / clientesTotales : 0;
+    
+    // Top clientes
+    const clientesData = {};
     
     pedidos.forEach(pedido => {
-      if (!pedido.usuario || !pedido.usuario._id) return;
+      const idCliente = pedido.usuario._id.toString();
       
-      const clienteId = pedido.usuario._id.toString();
-      
-      if (!clientesActivos[clienteId]) {
-        clientesActivos[clienteId] = {
-          id: clienteId,
-          nombre: pedido.usuario.nombre || 'Cliente',
-          email: pedido.usuario.email || '',
-          fechaRegistro: pedido.usuario.fechaCreacion,
+      if (!clientesData[idCliente]) {
+        clientesData[idCliente] = {
+          id: idCliente,
+          nombre: pedido.usuario.nombre,
+          email: pedido.usuario.email,
           pedidos: 0,
-          gasto: 0,
-          ultimaCompra: null
+          totalCompras: 0
         };
       }
       
-      clientesActivos[clienteId].pedidos += 1;
-      clientesActivos[clienteId].gasto += pedido.precioTotal || 0;
-      
-      // Actualizar fecha de última compra
-      const fechaPedido = new Date(pedido.fechaCreacion);
-      if (!clientesActivos[clienteId].ultimaCompra || fechaPedido > clientesActivos[clienteId].ultimaCompra) {
-        clientesActivos[clienteId].ultimaCompra = fechaPedido;
-      }
+      clientesData[idCliente].pedidos += 1;
+      clientesData[idCliente].totalCompras += pedido.total;
     });
-    
-    // Convertir a array y calcular datos adicionales
-    let listaClientes = Object.values(clientesActivos);
     
     // Calcular ticket promedio por cliente
-    listaClientes = listaClientes.map(cliente => ({
-      ...cliente,
-      ticketPromedio: cliente.pedidos > 0 ? cliente.gasto / cliente.pedidos : 0,
-      // Calcular si es cliente nuevo (se registró en el periodo)
-      esNuevo: cliente.fechaRegistro >= fechaInicio && cliente.fechaRegistro <= fechaFin
-    }));
-    
-    // Ordenar por gasto total
-    listaClientes.sort((a, b) => b.gasto - a.gasto);
-    
-    // Calcular distribución de clientes nuevos vs recurrentes
-    const clientesNuevos = listaClientes.filter(c => c.esNuevo).length;
-    const clientesRecurrentes = listaClientes.length - clientesNuevos;
-    
-    res.json({
-      success: true,
-      data: {
-        periodo: {
-          fechaInicio,
-          fechaFin
-        },
-        resumen: {
-          totalClientes: listaClientes.length,
-          nuevosRegistros: nuevosUsuarios,
-          clientesActivos: listaClientes.length,
-          gastoPromedio: listaClientes.reduce((sum, c) => sum + c.gasto, 0) / listaClientes.length || 0
-        },
-        distribucion: {
-          nuevos: clientesNuevos,
-          recurrentes: clientesRecurrentes
-        },
-        clientes: listaClientes
-      }
+    Object.values(clientesData).forEach(cliente => {
+      cliente.ticketPromedio = cliente.pedidos > 0 
+        ? cliente.totalCompras / cliente.pedidos 
+        : 0;
     });
     
-  } catch (error) {
-    console.error('Error al generar reporte de clientes:', error);
-    res.status(500).json({
-      success: false,
+    const topClientes = Object.values(clientesData)
+      .sort((a, b) => b.totalCompras - a.totalCompras)
+      .slice(0, 10);
+    
+    // Frecuencia de compra (simulación)
+    const frecuenciaCompra = [
+      { categoria: 'Primera compra', cantidad: Math.floor(clientesTotales * 0.4) },
+      { categoria: 'Compra ocasional', cantidad: Math.floor(clientesTotales * 0.3) },
+      { categoria: 'Compra frecuente', cantidad: Math.floor(clientesTotales * 0.2) },
+      { categoria: 'Cliente recurrente', cantidad: Math.floor(clientesTotales * 0.1) }
+    ];
+    
+    // Retención de clientes (simulación)
+    const retencionClientes = [
+      { mes: 'Enero', tasaRetencion: 65 },
+      { mes: 'Febrero', tasaRetencion: 68 },
+      { mes: 'Marzo', tasaRetencion: 72 },
+      { mes: 'Abril', tasaRetencion: 70 },
+      { mes: 'Mayo', tasaRetencion: 75 }
+    ];
+    
+    // Preparar nombres de meses
+    const nombresMeses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    // Construir respuesta
+    const reporte = {
+      periodo: {
+        fechaInicio: inicio,
+        fechaFin: fin,
+        mes: inicio.getMonth() + 1,
+        anio: inicio.getFullYear(),
+        nombreMes: nombresMeses[inicio.getMonth()]
+      },
+      clientesTotales,
+      nuevosClientes,
+      valorClientePromedio,
+      topClientes,
+      frecuenciaCompra,
+      retencionClientes
+    };
+    
+    res.json({ success: true, data: reporte });
+  } catch (err) {
+    console.error('Error en reporte de clientes:', err);
+    res.status(500).json({ 
+      success: false, 
       message: 'Error al generar el reporte de clientes',
-      error: error.message
+      error: err.message 
     });
   }
 });

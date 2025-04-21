@@ -1,10 +1,10 @@
 // cliente/src/pages/Home.jsx
-import { useState, useEffect,useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion'; // Necesitarás instalar framer-motion
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-
+import { getFullImageUrl } from '../utils/imageUtils';
 import ProductCard from '../components/productos/ProductCard';
 
 const Home = () => {
@@ -13,16 +13,19 @@ const Home = () => {
   const [ofertas, setOfertas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const placeholderImage = '/placeholder-product.jpg';
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         // Obtener productos destacados
         const resDestacados = await axios.get('/api/productos?destacado=true&limit=4');
+        console.log("Datos de productos destacados:", resDestacados.data.data);
         setDestacados(resDestacados.data.data);
 
         // Obtener productos en oferta
         const resOfertas = await axios.get('/api/productos?enOferta=true&limit=4');
+        console.log("Datos de productos en oferta:", resOfertas.data.data);
         setOfertas(resOfertas.data.data);
 
         setLoading(false);
@@ -78,6 +81,80 @@ const Home = () => {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.6 }
+  };
+
+  // Componente ProductCard personalizado para usar dentro del Home
+  const CustomProductCard = ({ producto }) => {
+    // Formatear precio como moneda chilena
+    const formatPrice = (price) => {
+      return new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP'
+      }).format(price);
+    };
+
+    // Calcular precio con descuento si está en oferta
+    const precioFinal = producto.enOferta 
+      ? producto.precio * (1 - producto.descuento / 100) 
+      : producto.precio;
+
+    return (
+      <Link
+        to={`/productos/${producto._id}`}
+        className="group bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      >
+        <div className="relative h-48">
+          <img
+            src={getFullImageUrl(producto, placeholderImage)}
+            alt={producto.nombre}
+            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              console.error("Error al cargar la imagen:", producto._id);
+              e.target.src = placeholderImage;
+            }}
+          />
+          {producto.enOferta && (
+            <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+              {producto.descuento}% OFF
+            </div>
+          )}
+          {producto.destacado && !producto.enOferta && (
+            <div className="absolute top-3 right-3 bg-[#FFD15C] text-white px-3 py-1 rounded-full text-sm font-bold">
+              Destacado
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-1 group-hover:text-[#FFD15C] transition-colors duration-200">
+            {producto.nombre}
+          </h3>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600 capitalize">
+              {producto.tipoMascota}
+            </span>
+            <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600 capitalize">
+              {producto.categoria}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            {producto.enOferta ? (
+              <>
+                <span className="text-gray-400 line-through text-sm">
+                  {formatPrice(producto.precio)}
+                </span>
+                <span className="text-xl font-bold text-[#FFD15C]">
+                  {formatPrice(precioFinal)}
+                </span>
+              </>
+            ) : (
+              <span className="text-xl font-bold text-[#FFD15C]">
+                {formatPrice(producto.precio)}
+              </span>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
   };
 
   return (
@@ -191,6 +268,10 @@ const Home = () => {
                     src={categoria.imagen} 
                     alt={categoria.nombre}
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
+                    onError={(e) => {
+                      console.error("Error al cargar la imagen de categoría:", categoria.id);
+                      e.target.src = placeholderImage;
+                    }}
                   />
                 </div>
                 <div className="p-6">
@@ -223,6 +304,10 @@ const Home = () => {
                   src={tipo.imagen} 
                   alt={tipo.nombre}
                   className="w-full h-full object-cover" 
+                  onError={(e) => {
+                    console.error("Error al cargar la imagen de tipo de mascota:", tipo.id);
+                    e.target.src = placeholderImage;
+                  }}
                 />
               </div>
               <h3 className="font-medium">{tipo.nombre}</h3>
@@ -251,7 +336,7 @@ const Home = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {destacados.map((producto) => (
-              <ProductCard key={producto._id} producto={producto} />
+              <CustomProductCard key={producto._id} producto={producto} />
             ))}
             
             {destacados.length === 0 && (
@@ -283,7 +368,7 @@ const Home = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {ofertas.map((producto) => (
-              <ProductCard key={producto._id} producto={producto} />
+              <CustomProductCard key={producto._id} producto={producto} />
             ))}
             
             {ofertas.length === 0 && (

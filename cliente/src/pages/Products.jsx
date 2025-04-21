@@ -307,6 +307,50 @@ const Products = () => {
               />
             </div>
           </div>
+
+          {/* Marca */}
+          <div className="mb-8">
+            <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              Marca
+            </h3>
+            <select
+              name="marca"
+              value={filtros.marca}
+              onChange={handleFiltroChange}
+              className="form-input w-full rounded-lg border-gray-300 focus:border-[#FFD15C] focus:ring-[#FFD15C] transition"
+            >
+              <option value="">Todas las marcas</option>
+              {/* Aquí deberías cargar las marcas desde tu base de datos */}
+              <option value="marca1">Marca 1</option>
+              <option value="marca2">Marca 2</option>
+              <option value="marca3">Marca 3</option>
+            </select>
+          </div>
+  
+          {/* Descuento */}
+          <div className="mb-8">
+            <h3 className="text-gray-700 font-semibold mb-2 flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Descuento
+            </h3>
+            <select
+              name="descuento"
+              value={filtros.descuento}
+              onChange={handleFiltroChange}
+              className="form-input w-full rounded-lg border-gray-300 focus:border-[#FFD15C] focus:ring-[#FFD15C] transition"
+            >
+              <option value="">Todos los descuentos</option>
+              <option value="10">10% o más</option>
+              <option value="20">20% o más</option>
+              <option value="30">30% o más</option>
+              <option value="50">50% o más</option>
+            </select>
+          </div>
   
           {/* Opciones adicionales */}
           <div>

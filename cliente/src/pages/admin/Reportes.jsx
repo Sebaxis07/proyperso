@@ -1,6 +1,6 @@
-// cliente/src/pages/admin/Reportes.jsx
+// pages/admin/Reportes.jsx
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell,
@@ -53,6 +53,15 @@ const Reportes = () => {
     // Cargar reporte al iniciar
     cargarReporte();
   }, [location.search]);
+  
+  // Formatear número como moneda
+  const formatMoney = (amount) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
   
   // Función para cambiar tipo de reporte
   const cambiarTipoReporte = (tipo) => {
@@ -165,7 +174,7 @@ const Reportes = () => {
       setLoading(false);
     } catch (err) {
       console.error('Error al cargar el reporte:', err);
-      setError(err.message || 'Error al cargar el reporte. Por favor, intenta nuevamente.');
+      setError(err.response?.data?.message || err.message || 'Error al cargar el reporte');
       setLoading(false);
     }
   };
@@ -220,7 +229,7 @@ const Reportes = () => {
       setError('Error al exportar el reporte. Por favor, intenta nuevamente.');
     }
   };
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -237,7 +246,7 @@ const Reportes = () => {
     );
   }
 
-  // Componentes específicos para cada tipo de reporte
+  // Componente para mostrar el reporte mensual
   const renderReporteMensual = () => {
     if (!reporteData) return null;
     
@@ -252,397 +261,368 @@ const Reportes = () => {
           {/* Métricas principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Ventas Totales</h4>
-              <p className="text-2xl font-bold">${reporteData.metricas.ventasTotales.toLocaleString()}</p>
-              <div className={`text-sm mt-1 ${reporteData.metricas.comparacionMesAnterior.variacionPorcentual >= 0 
-                ? 'text-green-600' : 'text-red-600'}`}>
-                {reporteData.metricas.comparacionMesAnterior.variacionPorcentual >= 0 ? '↑' : '↓'} 
-                {Math.abs(reporteData.metricas.comparacionMesAnterior.variacionPorcentual).toFixed(1)}% vs mes anterior
-              </div>
+              <h4 className="text-gray-600 text-sm">Total Ventas</h4>
+              <p className="text-2xl font-bold text-blue-700">{formatMoney(reporteData.ventas.total)}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {reporteData.ventas.porcentajeCambio >= 0 ? '↑' : '↓'} 
+                {Math.abs(reporteData.ventas.porcentajeCambio)}% vs mes anterior
+              </p>
             </div>
             
             <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Cantidad de Pedidos</h4>
-              <p className="text-2xl font-bold">{reporteData.metricas.cantidadPedidos}</p>
+              <h4 className="text-gray-600 text-sm">Total Pedidos</h4>
+              <p className="text-2xl font-bold text-green-700">{reporteData.pedidos.total}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {reporteData.pedidos.porcentajeCambio >= 0 ? '↑' : '↓'} 
+                {Math.abs(reporteData.pedidos.porcentajeCambio)}% vs mes anterior
+              </p>
             </div>
             
             <div className="bg-yellow-50 p-4 rounded-lg">
               <h4 className="text-gray-600 text-sm">Ticket Promedio</h4>
-              <p className="text-2xl font-bold">${reporteData.metricas.ticketPromedio.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-yellow-700">{formatMoney(reporteData.ticketPromedio.valor)}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {reporteData.ticketPromedio.porcentajeCambio >= 0 ? '↑' : '↓'} 
+                {Math.abs(reporteData.ticketPromedio.porcentajeCambio)}% vs mes anterior
+              </p>
             </div>
             
             <div className="bg-purple-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Nuevos Usuarios</h4>
-              <p className="text-2xl font-bold">{reporteData.metricas.usuariosNuevos}</p>
+              <h4 className="text-gray-600 text-sm">Nuevos Clientes</h4>
+              <p className="text-2xl font-bold text-purple-700">{reporteData.nuevosClientes.total}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {reporteData.nuevosClientes.porcentajeCambio >= 0 ? '↑' : '↓'} 
+                {Math.abs(reporteData.nuevosClientes.porcentajeCambio)}% vs mes anterior
+              </p>
             </div>
           </div>
         </div>
         
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Ventas diarias */}
+        {/* Gráfico de ventas diarias */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold mb-4">Ventas Diarias</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={reporteData.ventasDiarias}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="dia" />
+              <YAxis />
+              <Tooltip formatter={(value) => formatMoney(value)} />
+              <Legend />
+              <Area type="monotone" dataKey="monto" stroke="#8884d8" fill="#8884d8" name="Ventas" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        
+        {/* Top productos y categorías */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Top Productos */}
           <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Ventas Diarias</h3>
+            <h3 className="text-lg font-semibold mb-4">Top Productos</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={reporteData.graficos.ventasDiarias}>
+              <BarChart data={reporteData.topProductos}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="dia" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(value, name) => [
-                  name === 'ventas' ? `$${value.toLocaleString()}` : value,
-                  name === 'ventas' ? 'Ventas' : 'Pedidos'
-                ]} />
+                <XAxis dataKey="nombre" />
+                <YAxis />
+                <Tooltip formatter={(value) => formatMoney(value)} />
                 <Legend />
-                <Line 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="ventas" 
-                  stroke="#8884d8" 
-                  name="Ventas ($)" 
-                  strokeWidth={2} 
-                  dot={{ r: 3 }}
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="pedidos" 
-                  stroke="#82ca9d" 
-                  name="Cantidad de Pedidos" 
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          
-          {/* Productos más vendidos */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Productos Más Vendidos</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart 
-                data={reporteData.graficos.productosMasVendidos.slice(0, 5)}
-                layout="vertical"
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis 
-                  type="category" 
-                  dataKey="nombre" 
-                  width={150}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip formatter={(value) => [`${value} unidades`, 'Cantidad']} />
-                <Legend />
-                <Bar dataKey="cantidad" fill="#8884d8" name="Unidades Vendidas" />
+                <Bar dataKey="ventas" name="Ventas" fill="#0088FE" />
               </BarChart>
             </ResponsiveContainer>
           </div>
           
-          {/* Estado de pedidos */}
+          {/* Ventas por Categoría */}
           <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Estado de Pedidos</h3>
+            <h3 className="text-lg font-semibold mb-4">Ventas por Categoría</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={reporteData.graficos.estadoPedidos}
+                  data={reporteData.ventasPorCategoria}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={100}
+                  outerRadius={80}
                   fill="#8884d8"
-                  dataKey="cantidad"
-                  nameKey="estado"
-                  label={({ estado, percent }) => `${estado}: ${(percent * 100).toFixed(0)}%`}
+                  dataKey="monto"
+                  nameKey="categoria"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {reporteData.graficos.estadoPedidos.map((entry, index) => (
+                  {reporteData.ventasPorCategoria.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value, name, props) => [`${value} pedidos`, props.payload.estado]} />
+                <Tooltip formatter={(value) => formatMoney(value)} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          </div>
-          
-          {/* Métodos de pago */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Métodos de Pago</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={reporteData.graficos.metodosPago}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="cantidad"
-                  nameKey="metodo"
-                  label={({ metodo, percent }) => `${metodo}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {reporteData.graficos.metodosPago.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value, name, props) => [`${value} pedidos ($${props.payload.total.toLocaleString()})`, props.payload.metodo]} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        {/* Tabla de detalle de pedidos */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Detalle de Pedidos</h3>
-            <button 
-              onClick={exportarAExcel}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              Exportar a Excel
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">ID</th>
-                  <th className="py-2 px-4 border-b text-left">Fecha</th>
-                  <th className="py-2 px-4 border-b text-left">Cliente</th>
-                  <th className="py-2 px-4 border-b text-left">Total</th>
-                  <th className="py-2 px-4 border-b text-left">Estado</th>
-                  <th className="py-2 px-4 border-b text-left">Método Pago</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reporteData.detallePedidos.map((pedido) => (
-                  <tr key={pedido.id}>
-                    <td className="py-2 px-4 border-b">{pedido.id.substring(0, 8)}...</td>
-                    <td className="py-2 px-4 border-b">{new Date(pedido.fecha).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 border-b">{pedido.cliente}</td>
-                    <td className="py-2 px-4 border-b">${pedido.total.toLocaleString()}</td>
-                    <td className="py-2 px-4 border-b">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        pedido.estado === 'entregado' ? 'bg-green-100 text-green-800' : 
-                        pedido.estado === 'enviado' ? 'bg-blue-100 text-blue-800' : 
-                        pedido.estado === 'pagado' ? 'bg-yellow-100 text-yellow-800' :
-                        pedido.estado === 'cancelado' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {pedido.estado || 'pendiente'}
-                      </span>
-                    </td>
-                    <td className="py-2 px-4 border-b">{pedido.metodoPago || 'No especificado'}</td>
-                  </tr>
-                ))}
-                
-                {reporteData.detallePedidos.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="py-4 text-center text-gray-500">
-                      No hay pedidos en este periodo
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>
     );
   };
-
-  // Renderizar componente de productos
+  
+  // Componente para mostrar el reporte de ventas
+  const renderReporteVentas = () => {
+    if (!reporteData) return null;
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="text-lg font-semibold mb-2">
+            Reporte de Ventas - {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
+          </h3>
+          
+          {/* Gráfico de ventas por día de la semana */}
+          <div className="mt-6">
+            <h4 className="text-md font-medium mb-2">Ventas por Día de la Semana</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={reporteData.ventasPorDiaSemana}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="dia" />
+                <YAxis />
+                <Tooltip formatter={(value) => formatMoney(value)} />
+                <Legend />
+                <Bar dataKey="monto" name="Monto" fill="#0088FE" />
+                <Bar dataKey="cantidad" name="Cantidad" fill="#00C49F" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Ventas por hora del día */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Ventas por Hora</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={reporteData.ventasPorHora}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hora" />
+                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                <Tooltip formatter={(value, name) => name === 'monto' ? formatMoney(value) : value} />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="monto" name="Monto" stroke="#8884d8" />
+                <Line yAxisId="right" type="monotone" dataKey="cantidad" name="Cantidad" stroke="#82ca9d" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Métodos de pago */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Ventas por Método de Pago</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={reporteData.ventasPorMetodoPago}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="monto"
+                    nameKey="metodo"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {reporteData.ventasPorMetodoPago.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatMoney(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              <div className="p-4">
+                <h5 className="font-medium mb-2">Detalle por Método de Pago</h5>
+                <div className="space-y-2">
+                  {reporteData.ventasPorMetodoPago.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        ></div>
+                        <span>{item.metodo}</span>
+                      </div>
+                      <span className="font-medium">{formatMoney(item.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Componente para mostrar el reporte de productos
   const renderReporteProductos = () => {
     if (!reporteData) return null;
     
     return (
       <div className="space-y-6">
-        {/* Información del periodo */}
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold mb-2">
-            Reporte de Productos: {new Date(reporteData.periodo.fechaInicio).toLocaleDateString()} - {new Date(reporteData.periodo.fechaFin).toLocaleDateString()}
+            Reporte de Productos - {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
           </h3>
           
-          {/* Métricas principales */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Total Productos Vendidos</h4>
-              <p className="text-2xl font-bold">{reporteData.resumen.totalProductosVendidos}</p>
-            </div>
-            
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Ingresos Generados</h4>
-              <p className="text-2xl font-bold">${reporteData.resumen.ingresosGenerados.toLocaleString()}</p>
-            </div>
-            
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Productos Distintos</h4>
-              <p className="text-2xl font-bold">{reporteData.resumen.productosDistintos}</p>
+          {/* Top productos más vendidos */}
+          <div className="mt-6">
+            <h4 className="text-md font-medium mb-2">Productos más Vendidos</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-2 px-4 border-b text-left">Producto</th>
+                    <th className="py-2 px-4 border-b text-left">Categoría</th>
+                    <th className="py-2 px-4 border-b text-right">Unidades</th>
+                    <th className="py-2 px-4 border-b text-right">Ventas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reporteData.productosMasVendidos.map((producto, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                      <td className="py-2 px-4 border-b">{producto.nombre}</td>
+                      <td className="py-2 px-4 border-b">{producto.categoria}</td>
+                      <td className="py-2 px-4 border-b text-right">{producto.unidades}</td>
+                      <td className="py-2 px-4 border-b text-right">{formatMoney(producto.ventas)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-        
-        {/* Gráficos de productos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top productos */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Productos Más Vendidos</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart 
-                data={reporteData.productos.slice(0, 10)}
-                layout="vertical"
-              >
+          
+          {/* Productos por rentabilidad */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Productos por Rentabilidad</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={reporteData.productosPorRentabilidad} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
-                <YAxis 
-                  type="category" 
-                  dataKey="nombre" 
-                  width={150}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip formatter={(value) => [`${value} unidades`, 'Cantidad']} />
+                <YAxis type="category" dataKey="nombre" width={150} />
+                <Tooltip formatter={(value, name) => name === 'rentabilidad' ? `${value}%` : formatMoney(value)} />
                 <Legend />
-                <Bar dataKey="cantidad" fill="#8884d8" name="Unidades Vendidas" />
+                <Bar dataKey="margenTotal" name="Margen Total" fill="#0088FE" />
+                <Bar dataKey="rentabilidad" name="% Rentabilidad" fill="#00C49F" />
               </BarChart>
             </ResponsiveContainer>
           </div>
           
-          {/* Ventas por categoría */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Ventas por Categoría</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie
-                  data={reporteData.categorias}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={120}
-                  fill="#8884d8"
-                  dataKey="ingresos"
-                  nameKey="categoria"
-                  label={({ categoria, percent }) => `${categoria}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {reporteData.categorias.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Ingresos']} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        {/* Lista de productos */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Listado de Productos</h3>
-            <button 
-              onClick={exportarAExcel}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              Exportar a Excel
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">Producto</th>
-                  <th className="py-2 px-4 border-b text-left">Categoría</th>
-                  <th className="py-2 px-4 border-b text-left">Cantidad</th>
-                  <th className="py-2 px-4 border-b text-left">Precio</th>
-                  <th className="py-2 px-4 border-b text-left">Ingresos</th>
-                  <th className="py-2 px-4 border-b text-left">Stock Actual</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reporteData.productos.map((producto) => (
-                  <tr key={producto.id}>
-                    <td className="py-2 px-4 border-b">{producto.nombre}</td>
-                    <td className="py-2 px-4 border-b">{producto.categoria}</td>
-                    <td className="py-2 px-4 border-b">{producto.cantidad}</td>
-                    <td className="py-2 px-4 border-b">${producto.precio.toFixed(2)}</td>
-                    <td className="py-2 px-4 border-b">${producto.ingresos.toLocaleString()}</td>
-                    <td className="py-2 px-4 border-b">{producto.stock}</td>
-                  </tr>
-                ))}
-                
-                {reporteData.productos.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="py-4 text-center text-gray-500">
-                      No hay datos de productos para este periodo
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          {/* Rotación de inventario */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Rotación de Inventario</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="py-2 px-4 border-b text-left">Producto</th>
+                      <th className="py-2 px-4 border-b text-right">Inventario Inicial</th>
+                      <th className="py-2 px-4 border-b text-right">Ventas</th>
+                      <th className="py-2 px-4 border-b text-right">Stock Actual</th>
+                      <th className="py-2 px-4 border-b text-right">Rotación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reporteData.rotacionInventario.map((producto, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                        <td className="py-2 px-4 border-b">{producto.nombre}</td>
+                        <td className="py-2 px-4 border-b text-right">{producto.inventarioInicial}</td>
+                        <td className="py-2 px-4 border-b text-right">{producto.ventas}</td>
+                        <td className="py-2 px-4 border-b text-right">{producto.stockActual}</td>
+                        <td className="py-2 px-4 border-b text-right">{producto.rotacion.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   };
-
-  // Renderizar componente de clientes
+  
+  // Componente para mostrar el reporte de clientes
   const renderReporteClientes = () => {
     if (!reporteData) return null;
     
     return (
       <div className="space-y-6">
-        {/* Información del periodo */}
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold mb-2">
-            Reporte de Clientes: {new Date(reporteData.periodo.fechaInicio).toLocaleDateString()} - {new Date(reporteData.periodo.fechaFin).toLocaleDateString()}
+            Reporte de Clientes - {reporteData.periodo.nombreMes} {reporteData.periodo.anio}
           </h3>
           
-          {/* Métricas principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          {/* Métricas principales de clientes */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Total Clientes</h4>
-              <p className="text-2xl font-bold">{reporteData.resumen.totalClientes}</p>
+              <h4 className="text-gray-600 text-sm">Clientes Totales</h4>
+              <p className="text-2xl font-bold text-blue-700">{reporteData.clientesTotales}</p>
+              <p className="text-sm text-gray-500 mt-1">Activos en el periodo</p>
             </div>
             
             <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Nuevos Registros</h4>
-              <p className="text-2xl font-bold">{reporteData.resumen.nuevosRegistros}</p>
+              <h4 className="text-gray-600 text-sm">Nuevos Clientes</h4>
+              <p className="text-2xl font-bold text-green-700">{reporteData.nuevosClientes}</p>
+              <p className="text-sm text-gray-500 mt-1">Registrados en el periodo</p>
             </div>
             
             <div className="bg-yellow-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Clientes Activos</h4>
-              <p className="text-2xl font-bold">{reporteData.resumen.clientesActivos}</p>
-            </div>
-            
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Gasto Promedio</h4>
-              <p className="text-2xl font-bold">${reporteData.resumen.gastoPromedio.toFixed(2)}</p>
+              <h4 className="text-gray-600 text-sm">Valor Cliente Promedio</h4>
+              <p className="text-2xl font-bold text-yellow-700">{formatMoney(reporteData.valorClientePromedio)}</p>
+              <p className="text-sm text-gray-500 mt-1">Ventas / Nº Clientes</p>
             </div>
           </div>
-        </div>
-        
-        {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Distribución de clientes */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Distribución de Clientes</h3>
+          
+          {/* Top clientes */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Top Clientes por Compras</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="py-2 px-4 border-b text-left">Cliente</th>
+                    <th className="py-2 px-4 border-b text-left">Email</th>
+                    <th className="py-2 px-4 border-b text-right">Pedidos</th>
+                    <th className="py-2 px-4 border-b text-right">Total Compras</th>
+                    <th className="py-2 px-4 border-b text-right">Ticket Promedio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reporteData.topClientes.map((cliente, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                      <td className="py-2 px-4 border-b">{cliente.nombre}</td>
+                      <td className="py-2 px-4 border-b">{cliente.email}</td>
+                      <td className="py-2 px-4 border-b text-right">{cliente.pedidos}</td>
+                      <td className="py-2 px-4 border-b text-right">{formatMoney(cliente.totalCompras)}</td>
+                      <td className="py-2 px-4 border-b text-right">{formatMoney(cliente.ticketPromedio)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          {/* Frecuencia de compra */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Frecuencia de Compra</h4>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={[
-                    { name: 'Nuevos', value: reporteData.distribucion.nuevos },
-                    { name: 'Recurrentes', value: reporteData.distribucion.recurrentes }
-                  ]}
+                  data={reporteData.frecuenciaCompra}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  outerRadius={100}
+                  outerRadius={80}
                   fill="#8884d8"
-                  dataKey="value"
+                  dataKey="cantidad"
+                  nameKey="categoria"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  <Cell fill="#0088FE" />
-                  <Cell fill="#00C49F" />
+                  {reporteData.frecuenciaCompra.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
@@ -650,323 +630,130 @@ const Reportes = () => {
             </ResponsiveContainer>
           </div>
           
-          {/* Top clientes por gasto */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="text-lg font-semibold mb-4">Top Clientes por Gasto</h3>
+          {/* Retención de clientes */}
+          <div className="mt-8">
+            <h4 className="text-md font-medium mb-2">Retención de Clientes</h4>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart 
-                data={reporteData.clientes.slice(0, 5)}
-                layout="vertical"
-              >
+              <LineChart data={reporteData.retencionClientes}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis 
-                  type="category" 
-                  dataKey="nombre" 
-                  width={150}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Gasto']} />
+                <XAxis dataKey="mes" />
+                <YAxis />
+                <Tooltip formatter={(value) => `${value}%`} />
                 <Legend />
-                <Bar dataKey="gasto" fill="#8884d8" name="Gasto Total ($)" />
-              </BarChart>
+                <Line type="monotone" dataKey="tasaRetencion" name="Tasa de Retención" stroke="#8884d8" />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
-        
-        {/* Lista de clientes */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Listado de Clientes</h3>
-            <button 
-              onClick={exportarAExcel}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              Exportar a Excel
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">Cliente</th>
-                  <th className="py-2 px-4 border-b text-left">Email</th>
-                  <th className="py-2 px-4 border-b text-left">Fecha Registro</th>
-                  <th className="py-2 px-4 border-b text-left">Pedidos</th>
-                  <th className="py-2 px-4 border-b text-left">Gasto Total</th>
-                  <th className="py-2 px-4 border-b text-left">Ticket Promedio</th>
-                  <th className="py-2 px-4 border-b text-left">Última Compra</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reporteData.clientes.map((cliente) => (
-                  <tr key={cliente.id}>
-                    <td className="py-2 px-4 border-b">{cliente.nombre}</td>
-                    <td className="py-2 px-4 border-b">{cliente.email}</td>
-                    <td className="py-2 px-4 border-b">{new Date(cliente.fechaRegistro).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 border-b">{cliente.pedidos}</td>
-                    <td className="py-2 px-4 border-b">${cliente.gasto.toLocaleString()}</td>
-                    <td className="py-2 px-4 border-b">${cliente.ticketPromedio.toFixed(2)}</td>
-                    <td className="py-2 px-4 border-b">{new Date(cliente.ultimaCompra).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-                
-                {reporteData.clientes.length === 0 && (
-                  <tr>
-                    <td colSpan="7" className="py-4 text-center text-gray-500">
-                      No hay datos de clientes para este periodo
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     );
   };
-
-  // Renderizar componente de ventas
-  const renderReporteVentas = () => {
-    if (!reporteData) return null;
-    
-    return (
-      <div className="space-y-6">
-        {/* Información del periodo */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold mb-2">
-            Reporte de Ventas: {new Date(reporteData.fechaInicio).toLocaleDateString()} - {new Date(reporteData.fechaFin).toLocaleDateString()}
-          </h3>
-          
-          {/* Métricas principales */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Ventas Totales</h4>
-              <p className="text-2xl font-bold">${reporteData.ventasTotales.toLocaleString()}</p>
-            </div>
-            
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Cantidad de Pedidos</h4>
-              <p className="text-2xl font-bold">{reporteData.cantidadPedidos}</p>
-            </div>
-            
-            <div className="bg-yellow-50 p-4 rounded-lg">
-              <h4 className="text-gray-600 text-sm">Ticket Promedio</h4>
-              <p className="text-2xl font-bold">
-                ${reporteData.cantidadPedidos > 0 ? (reporteData.ventasTotales / reporteData.cantidadPedidos).toFixed(2) : '0.00'}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Gráfico de ventas */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold mb-4">Ventas por {reporteData.periodo === 'dia' ? 'Hora' : 
-                                                    reporteData.periodo === 'semana' ? 'Día' : 
-                                                    reporteData.periodo === 'mes' ? 'Día' : 'Mes'}</h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={reporteData.datosAgrupados}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={
-                reporteData.periodo === 'dia' ? 'hora' : 
-                reporteData.periodo === 'semana' ? 'dia' : 
-                reporteData.periodo === 'mes' ? 'dia' : 'mes'
-              } />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip formatter={(value, name) => [
-                name === 'ventas' ? `$${value.toLocaleString()}` : value,
-                name === 'ventas' ? 'Ventas' : 'Pedidos'
-              ]} />
-              <Legend />
-              <Line 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="ventas" 
-                stroke="#8884d8" 
-                name="Ventas ($)" 
-                strokeWidth={2} 
-                dot={{ r: 3 }}
-              />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="pedidos" 
-                stroke="#82ca9d" 
-                name="Cantidad de Pedidos" 
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        
-        {/* Tabla de datos */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Detalle de Ventas</h3>
-            <button 
-              onClick={exportarAExcel}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-            >
-              Exportar a Excel
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">
-                    {reporteData.periodo === 'dia' ? 'Hora' : 
-                     reporteData.periodo === 'semana' ? 'Día' : 
-                     reporteData.periodo === 'mes' ? 'Día' : 'Mes'}
-                  </th>
-                  <th className="py-2 px-4 border-b text-left">Ventas</th>
-                  <th className="py-2 px-4 border-b text-left">Pedidos</th>
-                  <th className="py-2 px-4 border-b text-left">Ticket Promedio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reporteData.datosAgrupados.map((dato, index) => (
-                  <tr key={index}>
-                    <td className="py-2 px-4 border-b">
-                      {reporteData.periodo === 'dia' ? `${dato.hora}:00` : 
-                       reporteData.periodo === 'semana' ? dato.dia : 
-                       reporteData.periodo === 'mes' ? dato.dia : dato.mes}
-                    </td>
-                    <td className="py-2 px-4 border-b">${dato.ventas.toLocaleString()}</td>
-                    <td className="py-2 px-4 border-b">{dato.pedidos}</td>
-                    <td className="py-2 px-4 border-b">
-                      ${dato.pedidos > 0 ? (dato.ventas / dato.pedidos).toFixed(2) : '0.00'}
-                    </td>
-                  </tr>
-                ))}
-                
-                {reporteData.datosAgrupados.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="py-4 text-center text-gray-500">
-                      No hay datos de ventas para este periodo
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Renderizar componente según el tipo de reporte seleccionado
-  const renderReporteContenido = () => {
-    switch (reporteActual) {
-      case 'mensual':
-        return renderReporteMensual();
-      case 'ventas':
-        return renderReporteVentas();
-      case 'productos':
-        return renderReporteProductos();
-      case 'clientes':
-        return renderReporteClientes();
-      default:
-        return renderReporteMensual();
-    }
-  };
-
+  
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Reportes</h1>
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">Reportes</h2>
+        
+        {/* Filtros de periodo */}
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={periodoSeleccionado.mes}
+            onChange={(e) => cambiarPeriodo(parseInt(e.target.value), periodoSeleccionado.anio)}
+          >
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+          </select>
+          
+          <select
+            className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={periodoSeleccionado.anio}
+            onChange={(e) => cambiarPeriodo(periodoSeleccionado.mes, parseInt(e.target.value))}
+          >
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+          
+          <button
+            onClick={exportarAExcel}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm1 4h12v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clipRule="evenodd" />
+              <path d="M7 9a1 1 0 011-1h1a1 1 0 110 2H8a1 1 0 01-1-1z" />
+              <path d="M7 12a1 1 0 011-1h1a1 1 0 110 2H8a1 1 0 01-1-1z" />
+            </svg>
+            Exportar a Excel
+          </button>
+        </div>
+      </div>
       
-      {/* Selector de tipo de reporte */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-4 gap-2">
-          <button 
+      {/* Menú de navegación entre reportes */}
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="flex flex-wrap">
+          <button
+            className={`px-4 py-3 text-sm font-medium ${
+              reporteActual === 'mensual' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-blue-600'
+            }`}
             onClick={() => cambiarTipoReporte('mensual')}
-            className={`p-3 rounded-md ${reporteActual === 'mensual' 
-              ? 'bg-primary-600 text-white' 
-              : 'bg-gray-100 hover:bg-gray-200'}`}
           >
             Reporte Mensual
           </button>
           
-          <button 
+          <button
+            className={`px-4 py-3 text-sm font-medium ${
+              reporteActual === 'ventas' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-blue-600'
+            }`}
             onClick={() => cambiarTipoReporte('ventas')}
-            className={`p-3 rounded-md ${reporteActual === 'ventas' 
-              ? 'bg-primary-600 text-white' 
-              : 'bg-gray-100 hover:bg-gray-200'}`}
           >
-            Ventas
+            Análisis de Ventas
           </button>
           
-          <button 
+          <button
+            className={`px-4 py-3 text-sm font-medium ${
+              reporteActual === 'productos' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-blue-600'
+            }`}
             onClick={() => cambiarTipoReporte('productos')}
-            className={`p-3 rounded-md ${reporteActual === 'productos' 
-              ? 'bg-primary-600 text-white' 
-              : 'bg-gray-100 hover:bg-gray-200'}`}
           >
-            Productos
+            Análisis de Productos
           </button>
           
-          <button 
+          <button
+            className={`px-4 py-3 text-sm font-medium ${
+              reporteActual === 'clientes' 
+              ? 'text-blue-600 border-b-2 border-blue-600' 
+              : 'text-gray-500 hover:text-blue-600'
+            }`}
             onClick={() => cambiarTipoReporte('clientes')}
-            className={`p-3 rounded-md ${reporteActual === 'clientes' 
-              ? 'bg-primary-600 text-white' 
-              : 'bg-gray-100 hover:bg-gray-200'}`}
           >
-            Clientes
+            Análisis de Clientes
           </button>
         </div>
       </div>
       
-      {/* Selector de periodo */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Seleccionar Periodo</h2>
-          
-          <div className="flex space-x-2">
-            <select 
-              className="border rounded-md px-3 py-2"
-              value={periodoSeleccionado.mes}
-              onChange={(e) => cambiarPeriodo(parseInt(e.target.value), periodoSeleccionado.anio)}
-            >
-              <option value="1">Enero</option>
-              <option value="2">Febrero</option>
-              <option value="3">Marzo</option>
-              <option value="4">Abril</option>
-              <option value="5">Mayo</option>
-              <option value="6">Junio</option>
-              <option value="7">Julio</option>
-              <option value="8">Agosto</option>
-              <option value="9">Septiembre</option>
-              <option value="10">Octubre</option>
-              <option value="11">Noviembre</option>
-              <option value="12">Diciembre</option>
-            </select>
-            
-            <select 
-              className="border rounded-md px-3 py-2"
-              value={periodoSeleccionado.anio}
-              onChange={(e) => cambiarPeriodo(periodoSeleccionado.mes, parseInt(e.target.value))}
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(anio => (
-                <option key={anio} value={anio}>{anio}</option>
-              ))}
-            </select>
-            
-            <button 
-              onClick={() => cambiarPeriodo(new Date().getMonth() + 1, new Date().getFullYear())}
-              className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md"
-            >
-              Mes Actual
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Contenido del reporte */}
-      {renderReporteContenido()}
+      {/* Contenido del reporte según tipo seleccionado */}
+      {reporteActual === 'mensual' && renderReporteMensual()}
+      {reporteActual === 'ventas' && renderReporteVentas()}
+      {reporteActual === 'productos' && renderReporteProductos()}
+      {reporteActual === 'clientes' && renderReporteClientes()}
     </div>
   );
 };
-
 export default Reportes;

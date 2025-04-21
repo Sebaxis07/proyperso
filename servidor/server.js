@@ -34,15 +34,25 @@ if (!fs.existsSync(uploadsDir)) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Configurar fileUpload
 app.use(fileUpload({
-  createParentPath: true, // Crear directorios automáticamente si no existen
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  createParentPath: true,
+  limits: { 
+    fileSize: 5 * 1024 * 1024 // 5MB max
+  },
+  useTempFiles: true,
+  tempFileDir: path.join(__dirname, 'tmp'),
+  debug: true,
   abortOnLimit: true,
-  responseOnLimit: 'El archivo es demasiado grande (máximo 5MB)',
-  useTempFiles: true, // Usar archivos temporales para mejor rendimiento
-  tempFileDir: '/tmp/', // Directorio para archivos temporales
-  debug: process.env.NODE_ENV !== 'production' // Activar logs de debug en desarrollo
+  responseOnLimit: "Archivo demasiado grande"
 }));
+
+// Asegurarse que el directorio temporal existe
+const tempDir = path.join(__dirname, 'tmp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
 
 // Middleware para logging de solicitudes en desarrollo
 if (process.env.NODE_ENV !== 'production') {
@@ -52,6 +62,34 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// Middleware para logging de subidas de archivos
+app.use((req, res, next) => {
+  if (req.url.includes('/api/upload')) {
+    console.log('===== SOLICITUD DE SUBIDA DE ARCHIVO =====');
+    console.log(`Método: ${req.method}, URL: ${req.url}`);
+    console.log('Headers:', req.headers);
+    
+    // Log para archivos recibidos
+    if (req.files) {
+      console.log('Archivos recibidos:', Object.keys(req.files));
+      for (const key in req.files) {
+        const file = req.files[key];
+        console.log(`Archivo [${key}]:`, {
+          nombre: file.name,
+          tipo: file.mimetype,
+          tamaño: `${(file.size / 1024).toFixed(2)} KB`,
+          md5: file.md5
+        });
+      }
+    } else {
+      console.log('No se recibieron archivos');
+    }
+    
+    console.log('======================================');
+  }
+  next();
+});
+
 // Conectar a MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Conectado a MongoDB'))
@@ -59,7 +97,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Servir archivos estáticos - IMPORTANTE: esto debe estar antes de las rutas API
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
-
+import testimonioRoutes from './routes/testimonio.js'; 
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
@@ -67,7 +105,9 @@ app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/reportes', reportesRoutes);
-app.use('/api/reportes', exportRoutes); // Las rutas de exportación también están bajo /api/reportes
+app.use('/api/reportes', exportRoutes);
+app.use('/api/testimonios', testimonioRoutes);
+ // Las rutas de exportación también están bajo /api/reportes
 
 // Ruta de prueba
 app.get('/', (req, res) => {

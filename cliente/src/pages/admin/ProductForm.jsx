@@ -37,7 +37,10 @@ const ProductForm = () => {
     { id: 'accesorios', nombre: 'Accesorios' },
     { id: 'higiene', nombre: 'Higiene' },
     { id: 'juguetes', nombre: 'Juguetes' },
-    { id: 'medicamentos y cuidado', nombre: 'Medicamentos y cuidado' },
+    { id: 'medicamentos y cuidado', nombre: 'Medicamentos y Cuidado' }, // Corregido para coincidir exactamente con el enum
+    { id: 'camas', nombre: 'Camas' },
+    { id: 'transportadoras', nombre: 'Transportadoras' },
+    { id: 'otros', nombre: 'Otros' }
   ];
 
   // Opciones para tipo de mascota
@@ -169,11 +172,11 @@ const ProductForm = () => {
     }));
   };
 
-  // Subir imagen
+  // Reemplazar la función uploadImage existente con esta versión
   const uploadImage = async () => {
     if (!imageFile) {
       console.log("No hay archivo de imagen para subir");
-      return formData.imagenUrl; // Retornar la URL actual si no hay nueva imagen
+      return formData.imagenUrl;
     }
 
     try {
@@ -182,56 +185,62 @@ const ProductForm = () => {
       setUploadProgress(0);
 
       const token = localStorage.getItem('token');
-
       if (!token) {
         throw new Error('No estás autenticado');
       }
 
-      // Crear FormData para la subida
       const formDataObj = new FormData();
-      formDataObj.append('image', imageFile);
+      formDataObj.append('imagen', imageFile);
 
-      console.log("FormData creado con la imagen");
-      // Log del contenido de formDataObj (esto puede no mostrar el nombre del archivo directamente)
-      for (const value of formDataObj.values()) {
-        console.log("Valor en FormData:", value);
+      // Añadir logs para verificar el FormData
+      console.log("Contenido del FormData:");
+      for (let [key, value] of formDataObj.entries()) {
+        console.log(`${key}: ${value instanceof File ? value.name : value}`);
       }
-      console.log("¿Tiene 'image'?", formDataObj.has('image'));
-      if (formDataObj.get('image')) {
-        console.log("Nombre del archivo en FormData:", formDataObj.get('image').name);
-      }
-
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${token}`
-          // NO incluir Content-Type aquí, axios lo hará automáticamente
+          'Authorization': `Bearer ${token}`,
+          // No establecer 'Content-Type' - Axios lo ajustará automáticamente para FormData
         },
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(progress);
-          console.log("Progreso de carga:", progress, "%");
+          console.log(`Progreso de carga: ${progress}%`);
         }
       };
 
-      // Subir imagen
-      console.log("Enviando solicitud POST a /api/upload con FormData:", formDataObj);
-      const res = await axios.post('/api/upload', formDataObj, config);
-      console.log("Respuesta de carga:", res.data);
+      // Usar la URL completa para evitar problemas de proxy en desarrollo
+      const uploadUrl = import.meta.env.VITE_API_URL 
+        ? `${import.meta.env.VITE_API_URL}/api/upload` 
+        : 'http://localhost:5000/api/upload';
 
+      console.log("URL de subida:", uploadUrl);
+
+      const response = await axios.post(
+        uploadUrl,
+        formDataObj,
+        config
+      );
+
+      console.log("Respuesta del servidor:", response.data);
       setIsUploading(false);
 
-      if (!res.data.url) {
-        throw new Error('No se recibió URL de imagen del servidor');
+      if (response.data.success && response.data.data && response.data.data.url) {
+        return response.data.data.url;
+      } else {
+        throw new Error('No se recibió la URL de la imagen correctamente');
       }
 
-      return res.data.url; // URL de la imagen subida
     } catch (err) {
       console.error('Error al subir la imagen:', err);
-      console.error('Detalles del error:', err.response?.data || err.message);
-      setError(`Error al subir la imagen: ${err.response?.data?.msg || err.message}`);
+      if (err.response) {
+        console.error('Respuesta del servidor:', err.response.data);
+        console.error('Estado HTTP:', err.response.status);
+        console.error('Headers:', err.response.headers);
+      }
       setIsUploading(false);
-      return null;
+      throw new Error(err.response?.data?.message || 'Error al subir la imagen');
     }
   };
 
@@ -271,93 +280,104 @@ const ProductForm = () => {
   };
 
   // Enviar formulario
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Enviar formulario con corrección explícita
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) {
-      console.log("Formulario inválido. Errores:", formErrors);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      // Primero subir la imagen si hay una nueva
-      let imagenUrl = formData.imagenUrl;
-
-      if (imageFile) {
-        console.log("Subiendo nueva imagen");
-        const imageUrl = await uploadImage();
-
-        if (!imageUrl) {
-          throw new Error('Error al subir la imagen');
-        }
-
-        imagenUrl = imageUrl;
-        console.log("Imagen subida exitosamente:", imagenUrl);
-      } else {
-        console.log("Usando URL de imagen existente:", imagenUrl);
-      }
-
-      if (!imagenUrl) {
-        throw new Error('No se ha proporcionado una imagen para el producto');
-      }
-
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        throw new Error('No estás autenticado');
-      }
-
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      };
-
-      // Preparar datos para enviar
-      const productoData = {
-        ...formData,
-        imagenUrl,
-        precio: parseFloat(formData.precio),
-        stock: parseInt(formData.stock),
-        descuento: parseFloat(formData.descuento)
-      };
-
-      console.log("Datos del producto a guardar:", productoData);
-
-      let res;
-      if (isEditMode) {
-        // Actualizar producto existente
-        console.log(`Actualizando producto con ID: ${id}`);
-        res = await axios.put(`/api/productos/${id}`, productoData, config);
-      } else {
-        // Crear nuevo producto
-        console.log("Creando nuevo producto");
-        res = await axios.post('/api/productos', productoData, config);
-      }
-
-      console.log("Respuesta del servidor (guardar producto):", res.data);
-
-      // Navegar a la lista de productos después de crear/actualizar
-      navigate('/admin/productos');
-    } catch (err) {
-      console.error('Error al guardar el producto:', err);
-      console.error('Detalles del error:', err.response?.data || err.message);
-      setError(err.response?.data?.msg || `Error al guardar el producto: ${err.message}`);
-      setIsSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
+  if (!validateForm()) {
+    console.log("Formulario inválido. Errores:", formErrors);
+    return;
   }
+
+  setIsSubmitting(true);
+  setError(null);
+
+  try {
+    // Primero subir la imagen si hay una nueva
+    let imagenUrl = formData.imagenUrl;
+
+    if (imageFile) {
+      console.log("Subiendo nueva imagen");
+      const imageUrl = await uploadImage();
+
+      if (!imageUrl) {
+        throw new Error('Error al subir la imagen');
+      }
+
+      imagenUrl = imageUrl;
+      console.log("Imagen subida exitosamente:", imagenUrl);
+    } else {
+      console.log("Usando URL de imagen existente:", imagenUrl);
+    }
+
+    if (!imagenUrl) {
+      throw new Error('No se ha proporcionado una imagen para el producto');
+    }
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      throw new Error('No estás autenticado');
+    }
+
+    const config = {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    };
+
+    // CORRECCIÓN CRÍTICA: Forzar el valor correcto para la categoría de medicamentos
+    let categoriaCorregida = formData.categoria;
+    
+    // Si la categoría es de medicamentos, asegurarse de usar exactamente el formato correcto
+    if (categoriaCorregida.toLowerCase().includes('medicamentos y')) {
+      categoriaCorregida = 'medicamentos y cuidado';
+      console.log("Corrigiendo categoría a:", categoriaCorregida);
+    }
+
+    // Preparar datos para enviar con la categoría corregida
+    const productoData = {
+      ...formData,
+      categoria: categoriaCorregida, // Usar la categoría corregida
+      imagenUrl,
+      precio: parseFloat(formData.precio),
+      stock: parseInt(formData.stock),
+      descuento: parseFloat(formData.descuento)
+    };
+
+    console.log("Datos del producto a guardar:", productoData);
+    console.log("Valor de la categoría enviada:", productoData.categoria);
+
+    let res;
+    if (isEditMode) {
+      // Actualizar producto existente
+      console.log(`Actualizando producto con ID: ${id}`);
+      res = await axios.put(`/api/productos/${id}`, productoData, config);
+    } else {
+      // Crear nuevo producto
+      console.log("Creando nuevo producto");
+      res = await axios.post('/api/productos', productoData, config);
+    }
+
+    console.log("Respuesta del servidor (guardar producto):", res.data);
+
+    // Navegar a la lista de productos después de crear/actualizar
+    navigate('/admin/productos');
+  } catch (err) {
+    console.error('Error al guardar el producto:', err);
+    console.error('Detalles del error:', err.response?.data || err.message);
+    
+    // Si el error sigue siendo de validación de categoría, mostrar un mensaje más específico
+    if (err.response?.data?.error?.includes('medicamentos y Cuidado')) {
+      setError('Error en la categoría: Hay un problema con el formato de "Medicamentos y Cuidado". Por favor, contacte al administrador del sistema.');
+    } else {
+      setError(err.response?.data?.msg || `Error al guardar el producto: ${err.message}`);
+    }
+    
+    setIsSubmitting(false);
+  }
+};
   return (
     <div className="mb-8">
       <div className="flex justify-between items-center mb-6">
@@ -634,7 +654,7 @@ const ProductForm = () => {
               disabled={isSubmitting || isUploading}
               className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-primary-400 disabled:cursor-not-allowed"
             >
-              {(isSubmitting || isUploading) ? 'Guardando...' : isEditMode ? 'Actualizar Producto' : 'Crear Producto'}
+              {isSubmitting || isUploading ? 'Guardando...' : isEditMode ? 'Actualizar Producto' : 'Crear Producto'}
             </button>
           </div>
         </form>

@@ -54,27 +54,31 @@ const AdminDashboard = () => {
             'Authorization': `Bearer ${token}`
           }
         };
+    
         // Obtener datos de diferentes endpoints
         const [productos, pedidos, usuarios] = await Promise.all([
           axios.get('/api/productos', config),
-          axios.get('/api/pedidos?admin=true', config), // Usar la ruta administrativa específica
+          axios.get('/api/pedidos', config), // Asegúrate de que esta ruta te devuelva todos los pedidos
           axios.get('/api/usuarios', config)
         ]);
+        
+        // Debug: Ver qué datos estamos recibiendo
+        console.log("Datos de pedidos:", pedidos.data);
+        console.log("Estructura de un pedido:", pedidos.data.data.length > 0 ? pedidos.data.data[0] : "No hay pedidos");
         
         // Filtrar pedidos pendientes
         const pedidosList = pedidos.data.data || [];
         const pedidosPendientes = pedidosList.filter(
           pedido => pedido.estadoPedido === 'pendiente'
         ).length;
-
+    
         // Calcular total de montos de pedidos
         const totalMontosPedidos = pedidosList.reduce(
-          (total, pedido) => total + (pedido.precioTotal || 0), 
+          (total, pedido) => total + (pedido.precioTotal || pedido.total || 0), 
           0
         );
-
+    
         // Preparar datos para gráficos
-        
         // Procesar los datos para los pedidos mensuales
         const pedidosPorMes = procesarPedidosMensuales(pedidosList);
         
@@ -92,9 +96,9 @@ const AdminDashboard = () => {
         
         // Guardar últimos pedidos para mostrar en la tabla
         const ultimos = pedidosList.sort((a, b) => 
-          new Date(b.fechaCreacion) - new Date(a.fechaCreacion)
+          new Date(b.fechaCreacion || b.createdAt || b.fecha) - new Date(a.fechaCreacion || a.createdAt || a.fecha)
         ).slice(0, 5);
-
+    
         // Actualizar estados
         setStats({
           totalProductos: productos.data.total || 0,
@@ -120,8 +124,8 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     };
-
-    // Función para procesar pedidos mensuales
+    
+    // 2. Mejorar procesarPedidosMensuales para manejar diferentes estructuras
     const procesarPedidosMensuales = (pedidos) => {
       const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       const pedidosPorMes = Array(12).fill().map((_, i) => ({
@@ -131,11 +135,16 @@ const AdminDashboard = () => {
       }));
       
       pedidos.forEach(pedido => {
-        if (pedido.fechaCreacion) {
-          const fecha = new Date(pedido.fechaCreacion);
+        // Detectar qué campo de fecha existe en el pedido
+        const fechaPedido = pedido.fechaCreacion || pedido.createdAt || pedido.fecha;
+        if (fechaPedido) {
+          const fecha = new Date(fechaPedido);
           const mesIndex = fecha.getMonth();
           
-          pedidosPorMes[mesIndex].montos += pedido.precioTotal || 0;
+          // Verificar diferentes posibles campos para el monto total
+          const monto = pedido.precioTotal || pedido.total || 0;
+          
+          pedidosPorMes[mesIndex].montos += monto;
           pedidosPorMes[mesIndex].cantidad += 1;
         }
       });
@@ -144,15 +153,26 @@ const AdminDashboard = () => {
       return pedidosPorMes.filter(mes => mes.cantidad > 0);
     };
     
-    // Función para procesar productos más pedidos
+    // 3. Mejorar procesarProductosMasPedidos para manejar diferentes estructuras
     const procesarProductosMasPedidos = (pedidos) => {
       const productosCount = {};
       
       pedidos.forEach(pedido => {
-        if (pedido.items && Array.isArray(pedido.items)) {
-          pedido.items.forEach(item => {
-            const productoId = item.producto?._id || item.productoId;
-            const nombre = item.producto?.nombre || 'Producto';
+        // Verificar si los items están bajo "items" o bajo "productos"
+        const itemsPedido = pedido.items || pedido.productos || [];
+        
+        if (Array.isArray(itemsPedido)) {
+          itemsPedido.forEach(item => {
+            // Manejar diferentes estructuras para identificar el producto
+            const productoId = 
+              (item.producto && typeof item.producto === 'object') ? item.producto._id : 
+              item.productoId || item.producto || 'desconocido';
+            
+            // Obtener el nombre del producto según la estructura
+            const nombre = 
+              (item.producto && typeof item.producto === 'object') ? item.producto.nombre : 
+              item.nombre || 'Producto';
+            
             const cantidad = item.cantidad || 1;
             
             if (!productosCount[productoId]) {
@@ -167,34 +187,18 @@ const AdminDashboard = () => {
         }
       });
       
+      
+      // Añadir mensaje de depuración
+      console.log("Productos procesados:", productosCount);
+      
       // Convertir a array y ordenar
       return Object.values(productosCount)
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
     };
-    
-    // Función para procesar estado de pedidos
-    const procesarEstadoPedidos = (pedidos) => {
-      const estados = {};
-      
-      pedidos.forEach(pedido => {
-        const estado = pedido.estadoPedido || 'pendiente';
-        
-        if (!estados[estado]) {
-          estados[estado] = {
-            name: capitalizarPrimeraLetra(estado),
-            value: 0
-          };
-        }
-        
-        estados[estado].value += 1;
-      });
-      
-      // Convertir a array
-      return Object.values(estados);
+    const capitalizarPrimeraLetra = (texto) => {
+      return texto.charAt(0).toUpperCase() + texto.slice(1);
     };
-    
-    // Función para procesar usuarios por mes
     const procesarUsuariosPorMes = (pedidos, usuarios) => {
       const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       const usuariosPorMes = Array(12).fill().map((_, i) => ({
@@ -205,14 +209,14 @@ const AdminDashboard = () => {
       
       // Procesar usuarios nuevos por fecha de registro
       usuarios.forEach(usuario => {
-        if (usuario.fechaCreacion) {
-          const fecha = new Date(usuario.fechaCreacion);
-          const mesActual = new Date().getMonth();
-          const anioActual = new Date().getFullYear();
-          
-          if (fecha.getFullYear() === anioActual && fecha.getMonth() <= mesActual) {
-            usuariosPorMes[fecha.getMonth()].nuevos += 1;
-          }
+        const fechaRegistro = new Date(usuario.fechaCreacion || usuario.createdAt || usuario.fecha);
+        if (isNaN(fechaRegistro.getTime())) return; // Verificar que la fecha es válida
+        
+        const mesActual = new Date().getMonth();
+        const anioActual = new Date().getFullYear();
+        
+        if (fechaRegistro.getFullYear() === anioActual && fechaRegistro.getMonth() <= mesActual) {
+          usuariosPorMes[fechaRegistro.getMonth()].nuevos += 1;
         }
       });
       
@@ -220,20 +224,24 @@ const AdminDashboard = () => {
       const clientesPorMes = {};
       
       pedidos.forEach(pedido => {
-        if (pedido.fechaCreacion && pedido.usuario) {
-          const fecha = new Date(pedido.fechaCreacion);
+        const fechaPedido = new Date(pedido.fechaCreacion || pedido.createdAt || pedido.fecha);
+        if (isNaN(fechaPedido.getTime())) return; // Verificar que la fecha es válida
+        
+        if (pedido.usuario) {
           const mesActual = new Date().getMonth();
           const anioActual = new Date().getFullYear();
           
-          if (fecha.getFullYear() === anioActual && fecha.getMonth() <= mesActual) {
-            const mesIndex = fecha.getMonth();
-            const userId = pedido.usuario._id || pedido.usuarioId;
+          if (fechaPedido.getFullYear() === anioActual && fechaPedido.getMonth() <= mesActual) {
+            const mesIndex = fechaPedido.getMonth();
+            const userId = typeof pedido.usuario === 'object' ? pedido.usuario._id : pedido.usuario;
             
             if (!clientesPorMes[mesIndex]) {
               clientesPorMes[mesIndex] = new Set();
             }
             
-            clientesPorMes[mesIndex].add(userId);
+            if (userId) {
+              clientesPorMes[mesIndex].add(userId);
+            }
           }
         }
       });
@@ -247,12 +255,32 @@ const AdminDashboard = () => {
       return usuariosPorMes.filter(mes => mes.nuevos > 0 || mes.recurrentes > 0);
     };
     
-    // Función auxiliar para capitalizar
-    const capitalizarPrimeraLetra = (texto) => {
-      return texto.charAt(0).toUpperCase() + texto.slice(1);
+    // 4. Mejorar procesarEstadoPedidos para asegurar valores consistentes
+    const procesarEstadoPedidos = (pedidos) => {
+      const estados = {};
+      
+      pedidos.forEach(pedido => {
+        // Asegurar que siempre hay un estado
+        const estado = pedido.estadoPedido || 'pendiente';
+        
+        if (!estados[estado]) {
+          estados[estado] = {
+            name: capitalizarPrimeraLetra(estado),
+            value: 0
+          };
+        }
+        
+        estados[estado].value += 1;
+      });
+      
+      // Añadir mensaje de depuración
+      console.log("Estados de pedidos procesados:", estados);
+      
+      // Convertir a array
+      return Object.values(estados);
     };
     
-    // Función para generar el reporte mensual
+    // 5. Mejorar generarReporteMensual para manejar diferentes estructuras
     const generarReporteMensual = (pedidos, usuarios) => {
       const fechaActual = new Date();
       const mesActual = fechaActual.getMonth();
@@ -260,12 +288,14 @@ const AdminDashboard = () => {
       
       // Filtrar pedidos del mes actual
       const pedidosMesActual = pedidos.filter(pedido => {
-        const fechaPedido = new Date(pedido.fechaCreacion);
+        const fechaPedido = new Date(pedido.fechaCreacion || pedido.createdAt || pedido.fecha);
         return fechaPedido.getMonth() === mesActual && fechaPedido.getFullYear() === anioActual;
       });
       
       // Calcular montos de pedidos del mes
-      const montoPedidosMes = pedidosMesActual.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
+      const montoPedidosMes = pedidosMesActual.reduce((total, pedido) => {
+        return total + (pedido.precioTotal || pedido.total || 0);
+      }, 0);
       
       // Cantidad de pedidos del mes
       const pedidosMes = pedidosMesActual.length;
@@ -275,19 +305,30 @@ const AdminDashboard = () => {
       
       // Clientes nuevos del mes
       const clientesNuevosMes = usuarios.filter(usuario => {
-        if (!usuario.fechaCreacion) return false;
-        const fechaRegistro = new Date(usuario.fechaCreacion);
+        if (!usuario.fechaCreacion && !usuario.createdAt) return false;
+        const fechaRegistro = new Date(usuario.fechaCreacion || usuario.createdAt);
         return fechaRegistro.getMonth() === mesActual && fechaRegistro.getFullYear() === anioActual;
       }).length;
       
       // Productos más pedidos del mes
       const productosMesActual = {};
       pedidosMesActual.forEach(pedido => {
-        if (pedido.items && Array.isArray(pedido.items)) {
-          pedido.items.forEach(item => {
-            const productoId = item.producto?._id || item.productoId;
-            const nombre = item.producto?.nombre || 'Producto';
+        const itemsPedido = pedido.items || pedido.productos || [];
+        
+        if (Array.isArray(itemsPedido)) {
+          itemsPedido.forEach(item => {
+            // Manejar diferentes estructuras para identificar el producto
+            const productoId = 
+              (item.producto && typeof item.producto === 'object') ? item.producto._id : 
+              item.productoId || item.producto || 'desconocido';
+            
+            // Obtener el nombre del producto según la estructura
+            const nombre = 
+              (item.producto && typeof item.producto === 'object') ? item.producto.nombre : 
+              item.nombre || 'Producto';
+            
             const cantidad = item.cantidad || 1;
+            const precio = item.precio || item.precioUnitario || 0;
             
             if (!productosMesActual[productoId]) {
               productosMesActual[productoId] = {
@@ -298,7 +339,7 @@ const AdminDashboard = () => {
             }
             
             productosMesActual[productoId].value += cantidad;
-            productosMesActual[productoId].montos += (item.precio || 0) * cantidad;
+            productosMesActual[productoId].montos += precio * cantidad;
           });
         }
       });
@@ -314,12 +355,14 @@ const AdminDashboard = () => {
       
       // Filtrar pedidos del mes anterior
       const pedidosMesAnterior = pedidos.filter(pedido => {
-        const fechaPedido = new Date(pedido.fechaCreacion);
+        const fechaPedido = new Date(pedido.fechaCreacion || pedido.createdAt || pedido.fecha);
         return fechaPedido.getMonth() === mesAnterior && fechaPedido.getFullYear() === anioMesAnterior;
       });
       
       // Calcular pedidos del mes anterior
-      const montoPedidosMesAnterior = pedidosMesAnterior.reduce((total, pedido) => total + (pedido.precioTotal || 0), 0);
+      const montoPedidosMesAnterior = pedidosMesAnterior.reduce((total, pedido) => {
+        return total + (pedido.precioTotal || pedido.total || 0);
+      }, 0);
       
       // Calcular porcentaje de cambio
       let porcentajeCambio = 0;
@@ -579,7 +622,7 @@ const AdminDashboard = () => {
         </div>
         
         <div className="mt-4 text-right">
-          <Link to="/admin/reportes?tipo=mensual" className="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center justify-end">
+          <Link to="/admin/reportes" className="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center justify-end">
             <span>Ver reporte completo</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -624,83 +667,7 @@ const AdminDashboard = () => {
       </div>
       
       {/* Últimos pedidos */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Últimos pedidos</h2>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pedido
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {ultimosPedidos.length > 0 ? (
-                ultimosPedidos.map((pedido) => (
-                  <tr key={pedido._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">#{pedido._id.substring(0, 8)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{pedido.usuario?.nombre || 'Cliente'}</div>
-                      <div className="text-sm text-gray-500">{pedido.usuario?.email || ''}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(pedido.fechaCreacion).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">${pedido.precioTotal?.toLocaleString() || '0'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${pedido.estadoPedido === 'pagado' ? 'bg-green-100 text-green-800' : 
-                        pedido.estadoPedido === 'enviado' ? 'bg-blue-100 text-blue-800' : 
-                        'bg-yellow-100 text-yellow-800'}`}>
-                        {pedido.estadoPedido || 'pendiente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <Link to={`/admin/pedidos/${pedido._id}`} className="text-primary-600 hover:text-primary-800 mr-3">
-                        Ver
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                    No hay pedidos recientes
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 text-right">
-          <Link to="/admin/pedidos" className="text-primary-600 hover:text-primary-800 text-sm font-medium">
-            Ver todos los pedidos →
-          </Link>
-        </div>
-      </div>
+      
     </div>
   );
 };

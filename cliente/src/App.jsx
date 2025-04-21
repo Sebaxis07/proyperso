@@ -11,12 +11,14 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Products from './pages/Products';
+import Contacto from './pages/Contacto';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
+import Nosotros from './pages/Nosotros';
 import NotFound from './pages/NotFound';
 import ConfirmacionReserva from './pages/ConfirmacionReserva';
 
@@ -27,6 +29,7 @@ import AdminOrders from './pages/admin/Orders';
 import AdminUsers from './pages/admin/Users';
 import ProductForm from './pages/admin/ProductForm';
 import NuevoUsuario from './pages/admin/Nuevo';
+import Reportes from './pages/admin/Reportes';
 import axios from 'axios';
 
 // Base URL para axios
@@ -47,6 +50,8 @@ function App() {
                 <Route path="/productos" element={<Products />} />
                 <Route path="/productos/:id" element={<ProductDetail />} />
                 <Route path="/carrito" element={<Cart />} />
+                <Route path="/nosotros" element={<Nosotros />} />
+                <Route path="/contacto" element={<Contacto />} />
                 
                 {/* Rutas protegidas (usuario) */}
                 <Route path="/checkout" element={
@@ -54,6 +59,12 @@ function App() {
                     <Checkout />
                   </PrivateRoute>
                 } />
+                {/* Nueva ruta para reportes */}
+                  <Route path="/admin/reportes" element={
+                    <AdminRoute>
+                      <Reportes />
+                    </AdminRoute>
+                  } />
                 <Route path="/perfil" element={
                   <PrivateRoute>
                     <Profile />

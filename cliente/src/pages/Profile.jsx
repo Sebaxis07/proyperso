@@ -3,13 +3,15 @@ import { useState, useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import InfoCard, { UserIcon, EmailIcon, PhoneIcon, IdIcon } from '../components/InfoCard';
+import axios from 'axios'; // Añadir este import
 
 const Profile = () => {
   const { currentUser, updateProfile, error } = useContext(AuthContext);
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
-  
+  const [pedidosCount, setPedidosCount] = useState(0);
+
   // Estado para el formulario
   const [formData, setFormData] = useState({
     nombre: '',
@@ -41,6 +43,25 @@ const Profile = () => {
           codigoPostal: currentUser.direccion?.codigoPostal || ''
         }
       });
+    }
+  }, [currentUser]);
+
+  // Añadir efecto para obtener el conteo de pedidos
+  useEffect(() => {
+    const fetchPedidosCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/pedidos/count', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setPedidosCount(response.data.count);
+      } catch (error) {
+        console.error('Error al obtener conteo de pedidos:', error);
+      }
+    };
+
+    if (currentUser) {
+      fetchPedidosCount();
     }
   }, [currentUser]);
 
@@ -118,6 +139,93 @@ const Profile = () => {
       }
     }
   };
+
+  // Modificar la sección del Resumen de Cuenta
+  const ResumenCuenta = () => (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sticky top-8 transform hover:scale-[1.02] transition-all duration-300">
+      <h3 className="text-xl font-bold text-gray-800 mb-6">Resumen de Cuenta</h3>
+      
+      <div className="space-y-6">
+        <div className="bg-gray-50 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-600">Pedidos realizados</span>
+            <span className="text-2xl font-bold text-[#FFD15C]">{pedidosCount}</span>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[#FFD15C] transition-all duration-1000"
+              style={{ width: `${Math.min((pedidosCount / 10) * 100, 100)}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <Link
+          to="/pedidos"
+          className="block text-center py-3 px-6 bg-[#FFD15C] text-white rounded-xl hover:bg-[#FFC132] transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+        >
+          Ver historial de pedidos
+        </Link>
+      </div>
+    </div>
+  );
+
+  // Modificar la sección de Dirección para permitir edición independiente
+  const DireccionSection = () => (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300">
+      <div className="p-8">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+            <span className="w-12 h-12 bg-[#FFD15C]/10 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </span>
+            Dirección de Envío
+          </h2>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-[#FFD15C] hover:text-[#FFC132] transition-colors duration-300"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+        </div>
+
+        {currentUser?.direccion?.calle ? (
+          <div className="bg-gray-50 rounded-2xl p-6 animate-fadeIn">
+            <p className="text-xl font-medium text-gray-900 mb-2">
+              {currentUser.direccion.calle} {currentUser.direccion.numero}
+            </p>
+            <p className="text-gray-600">
+              {currentUser.direccion.comuna}, {currentUser.direccion.ciudad}
+            </p>
+            <p className="text-gray-600">
+              {currentUser.direccion.region}
+              {currentUser.direccion.codigoPostal && 
+                <span className="ml-2 text-gray-500">CP: {currentUser.direccion.codigoPostal}</span>
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-12 animate-fadeIn">
+            <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p className="text-gray-500 mb-4">No has añadido una dirección todavía</p>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-[#FFD15C] hover:text-[#FFC132] font-medium"
+            >
+              Agregar dirección
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 py-12 animate-fadeIn">
@@ -376,78 +484,12 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Dirección */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300">
-              <div className="p-8">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3 mb-8">
-                  <span className="w-12 h-12 bg-[#FFD15C]/10 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </span>
-                  Dirección de Envío
-                </h2>
-
-                {currentUser?.direccion?.calle ? (
-                  <div className="bg-gray-50 rounded-2xl p-6 animate-fadeIn">
-                    <p className="text-xl font-medium text-gray-900 mb-2">
-                      {currentUser.direccion.calle} {currentUser.direccion.numero}
-                    </p>
-                    <p className="text-gray-600">
-                      {currentUser.direccion.comuna}, {currentUser.direccion.ciudad}
-                    </p>
-                    <p className="text-gray-600">
-                      {currentUser.direccion.region}
-                      {currentUser.direccion.codigoPostal && 
-                        <span className="ml-2 text-gray-500">CP: {currentUser.direccion.codigoPostal}</span>
-                      }
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center py-12 animate-fadeIn">
-                    <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <p className="text-gray-500 mb-4">No has añadido una dirección todavía</p>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="text-[#FFD15C] hover:text-[#FFC132] font-medium"
-                    >
-                      Agregar dirección
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <DireccionSection />
           </div>
 
           {/* Panel Lateral */}
           <div className="lg:col-span-4 space-y-8">
-            {/* Resumen */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sticky top-8 transform hover:scale-[1.02] transition-all duration-300">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">Resumen de Cuenta</h3>
-              
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-gray-600">Pedidos realizados</span>
-                    <span className="text-2xl font-bold text-[#FFD15C]">0</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#FFD15C] w-0 transition-all duration-1000"></div>
-                  </div>
-                </div>
-
-                <Link
-                  to="/pedidos"
-                  className="block text-center py-3 px-6 bg-[#FFD15C] text-white rounded-xl hover:bg-[#FFC132] transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
-                >
-                  Ver historial de pedidos
-                </Link>
-              </div>
-            </div>
+            <ResumenCuenta />
           </div>
         </div>
       </div>

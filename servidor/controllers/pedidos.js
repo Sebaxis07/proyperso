@@ -93,6 +93,38 @@ export async function crearPedido(req, res) {
   }
 }
 
+
+// @desc    Obtener cantidad de pedidos del usuario
+// @route   GET /api/pedidos/count
+// @access  Private
+export const getPedidosCount = async (req, res) => {
+  try {
+    // Obtener el ID del usuario desde el token JWT (asumiendo que usas middleware de autenticación)
+    const userId = req.usuario.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'No autorizado, token no válido'
+      });
+    }
+
+    // Contar pedidos del usuario
+    const count = await Pedido.countDocuments({ usuario: userId });
+
+    res.json({
+      success: true,
+      count
+    });
+  } catch (error) {
+    console.error('Error al obtener conteo de pedidos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error del servidor al obtener conteo de pedidos',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 // @desc    Obtener todos los pedidos del usuario
 // @route   GET /api/pedidos
 // @access  Private

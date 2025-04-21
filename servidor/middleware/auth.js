@@ -1,38 +1,53 @@
-// servidor/middleware/auth.js
-import jwt from 'jsonwebtoken';  // Change to default import
-import Usuario from '../models/Usuario.js';  // Import the model
+import jwt from 'jsonwebtoken';
+import Usuario from '../models/Usuario.js';
 
 // Middleware para proteger rutas
 export async function protect(req, res, next) {
-  let token;
-
-  // Verificar si existe token en el header
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
-
-  // Verificar si no hay token
-  if (!token) {
-    return res.status(401).json({ msg: 'No autorizado para acceder a esta ruta' });
-  }
-
   try {
-    // Verificar token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Obtener el token del header de autorización
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Acceso denegado. Se requiere autenticación.' 
+      });
+    }
 
-    // Buscar usuario usando el modelo
-    req.usuario = await Usuario.findById(decoded.id);
+    // Verificar el token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Buscar el usuario y adjuntarlo a la request
+    const usuario = await Usuario.findById(decoded.id);
+    
+    if (!usuario) {
+      return res.status(401).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    req.usuario = usuario;
     next();
-  } catch (err) {
-    return res.status(401).json({ msg: 'No autorizado para acceder a esta ruta' });
+    
+  } catch (error) {
+    console.error('Error al verificar token:', error);
+    res.status(401).json({ 
+      success: false,
+      message: 'Token inválido o expirado' 
+    });
   }
 }
 
-// Middleware para roles específicos
+// Middleware para autorización por roles
 export function authorize(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.usuario.rol)) {
-      return res.status(403).json({ msg: `El rol ${req.usuario.rol} no está autorizado para acceder a esta ruta` });
+      return res.status(403).json({ 
+        success: false,
+        message: `El rol ${req.usuario.rol} no está autorizado para acceder a esta ruta` 
+      });
     }
     next();
   };

@@ -23,6 +23,10 @@ const ProductDetail = () => {
         setLoading(true);
         setImageError(false); // Reset image error state on new product load
         const res = await axios.get(`/api/productos/${id}`);
+        
+        // Log para depuración
+        console.log("Datos del producto recibidos:", res.data.data);
+        
         setProducto(res.data.data);
         
         // Obtener productos relacionados
@@ -90,31 +94,74 @@ const ProductDetail = () => {
     setShowModal(true);
   };
 
-  // Determinar la URL de la imagen o usar placeholder
+  // Imagen predeterminada para casos de error
   const placeholderImage = '/placeholder-product.jpg';
 
-  // Función para obtener la URL completa de la imagen
-  const getFullImageUrl = (imagenUrl) => {
-    if (!imagenUrl || (imagenUrl === producto?.imagenUrl && imageError)) {
-      return placeholderImage;
-    }
+  // Función mejorada para obtener la URL completa de la imagen
+  const getFullImageUrl = (producto) => {
+    if (!producto) return placeholderImage;
     
-    // Si ya es una URL completa
-    if (imagenUrl.startsWith('http')) {
-      return imagenUrl;
-    }
+    // Depuración
+    console.log("Procesando imagen para producto:", producto._id);
+    console.log("Propiedades de imagen disponibles:", {
+      imagenUrl: producto.imagenUrl,
+      imagen: producto.imagen,
+      imagenUrlCompleta: producto.imagenUrlCompleta
+    });
     
-    // Si es una ruta relativa
-    // Aseguramos que comience con / para que sea una ruta absoluta desde el dominio
-    const url = imagenUrl.startsWith('/') 
-      ? imagenUrl 
-      : `/${imagenUrl}`;
+    // 1. Verificar si existe la propiedad imagenUrl directa
+    if (producto.imagenUrl && !imageError) {
+      console.log("Usando imagenUrl:", producto.imagenUrl);
       
-    // Obtenemos la URL base del backend desde las variables de entorno
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      // Si ya es una URL completa (comienza con http)
+      if (producto.imagenUrl.startsWith('http')) {
+        return producto.imagenUrl;
+      }
+      
+      // Si es una ruta relativa
+      const path = producto.imagenUrl.startsWith('/') 
+        ? producto.imagenUrl 
+        : `/${producto.imagenUrl}`;
+      
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      return `${baseUrl}${path}`;
+    }
     
-    // Construimos la URL completa
-    return `${baseUrl}${url}`;
+    // 2. Verificar si existe la propiedad imagen anidada
+    if (producto.imagen) {
+      console.log("Usando producto.imagen:", producto.imagen);
+      
+      // Si tiene URL directa en la propiedad imagen
+      if (producto.imagen.url && producto.imagen.url !== 'no-image.jpg') {
+        const imageUrl = producto.imagen.url;
+        
+        // Si ya es una URL completa
+        if (imageUrl.startsWith('http')) {
+          return imageUrl;
+        }
+        
+        // Si es una ruta relativa
+        const path = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        return `${baseUrl}${path}`;
+      }
+      
+      // Si tiene nombre pero no URL
+      if (producto.imagen.nombre && producto.imagen.nombre !== 'no-image.jpg') {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        return `${baseUrl}/uploads/productos/${producto.imagen.nombre}`;
+      }
+    }
+    
+    // 3. Verificar si existe la propiedad imagenUrlCompleta (virtual)
+    if (producto.imagenUrlCompleta) {
+      console.log("Usando imagenUrlCompleta:", producto.imagenUrlCompleta);
+      return producto.imagenUrlCompleta;
+    }
+    
+    // 4. Si nada funcionó, usar imagen predeterminada
+    console.log("Ninguna propiedad de imagen válida encontrada, usando placeholder");
+    return placeholderImage;
   };
 
   if (loading) {
@@ -176,10 +223,19 @@ const ProductDetail = () => {
             <div className="space-y-4">
               <div className="aspect-w-1 aspect-h-1 bg-white rounded-3xl shadow-lg overflow-hidden group">
                 <img 
-                  src={getFullImageUrl(producto.imagenUrl)}
+                  src={getFullImageUrl(producto)}
                   alt={producto.nombre}
-                  className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-700"
-                  onError={() => setImageError(true)}
+                  className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                  onError={(e) => {
+                    console.error("Error al cargar la imagen principal");
+                    setImageError(true);
+                    e.target.src = placeholderImage;
+                  }}
+                  style={{
+                    maxHeight: '100%',
+                    maxWidth: '100%',
+                    objectFit: 'cover' // Cambiado a object-cover
+                  }}
                 />
                 {producto.enOferta && (
                   <div className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-2 rounded-full font-bold shadow-lg">
@@ -302,6 +358,14 @@ const ProductDetail = () => {
             </div>
           </div>
 
+          {/* Descripción del producto */}
+          <div className="bg-white rounded-3xl shadow-lg p-8 mb-16">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Descripción del producto</h2>
+            <div className="prose max-w-none text-gray-700">
+              <p>{producto.descripcion}</p>
+            </div>
+          </div>
+
           {/* Productos Relacionados */}
           {productosRelacionados.length > 0 && (
             <div className="mt-16 animate-fadeIn">
@@ -318,10 +382,11 @@ const ProductDetail = () => {
                   >
                     <div className="relative h-48">
                       <img
-                        src={getFullImageUrl(prod.imagenUrl)}
+                        src={getFullImageUrl(prod)}
                         alt={prod.nombre}
                         className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
+                          console.error("Error al cargar la imagen del producto relacionado:", prod._id);
                           e.target.src = placeholderImage;
                         }}
                       />

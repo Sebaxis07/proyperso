@@ -1,11 +1,11 @@
 // cliente/src/pages/Cart.jsx
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 
 const Cart = () => {
-  const { cart, total, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
+  const { cart, updateQuantity, removeFromCart, clearCart } = useContext(CartContext);
   const { currentUser } = useContext(AuthContext);
 
   const formatPrice = (price) => {
@@ -15,8 +15,81 @@ const Cart = () => {
     }).format(price);
   };
 
-  const costoEnvio = total > 30000 ? 0 : 3990;
-  const totalConEnvio = total + costoEnvio;
+  // Función robusta para calcular el precio con descuento
+  const getDiscountedPrice = (item) => {
+    // Caso 1: Si tiene oferta y descuento como propiedades
+    if (item.oferta && item.descuento) {
+      return item.precio - (item.precio * (item.descuento / 100));
+    }
+    
+    // Caso 2: Si tiene directamente precioOferta
+    if (item.precioOferta) {
+      return item.precioOferta;
+    }
+    
+    // Caso 3: Si tiene descuentoActivo y porcentajeDescuento
+    if (item.descuentoActivo && item.porcentajeDescuento) {
+      return item.precio - (item.precio * (item.porcentajeDescuento / 100));
+    }
+    
+    // Caso 4: Si tiene enOferta y descuento
+    if (item.enOferta && item.descuento) {
+      return item.precio - (item.precio * (item.descuento / 100));
+    }
+    
+    // Por defecto, devolver precio original
+    return item.precio;
+  };
+
+  // Verificar si un producto tiene algún tipo de descuento
+  const hasDiscount = (item) => {
+    return (
+      (item.oferta && item.descuento) || 
+      item.precioOferta || 
+      (item.descuentoActivo && item.porcentajeDescuento) ||
+      (item.enOferta && item.descuento)
+    );
+  };
+
+  // Obtener el porcentaje de descuento
+  const getDiscountPercentage = (item) => {
+    if (item.descuento) return item.descuento;
+    if (item.porcentajeDescuento) return item.porcentajeDescuento;
+    if (item.precioOferta) {
+      // Calcular el porcentaje si solo tenemos el precio con oferta
+      return Math.round(((item.precio - item.precioOferta) / item.precio) * 100);
+    }
+    return 0;
+  };
+
+  // Calcular totales usando useMemo para optimizar
+  const totals = useMemo(() => {
+    // Total sin descuentos
+    const originalTotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    
+    // Total con descuentos
+    const discountedTotal = cart.reduce((sum, item) => {
+      const effectivePrice = getDiscountedPrice(item);
+      return sum + (effectivePrice * item.cantidad);
+    }, 0);
+    
+    // Ahorro total
+    const savings = originalTotal - discountedTotal;
+    
+    // Costo de envío
+    const costoEnvio = discountedTotal > 30000 ? 0 : 3990;
+    
+    // Total con envío
+    const totalConEnvio = discountedTotal + costoEnvio;
+    
+    return {
+      originalTotal,
+      discountedTotal,
+      savings,
+      costoEnvio,
+      totalConEnvio
+    };
+  }, [cart]);
 
   // Modificar la función de actualización de cantidad
   const handleQuantityChange = (itemId, newQuantity, stockDisponible) => {
@@ -97,9 +170,24 @@ const Cart = () => {
                           <span className="capitalize">{item.categoria}</span>
                         </div>
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-4">
-                          {/* Precio */}
-                          <div className="font-semibold text-[#FFD15C] text-lg">
-                            {formatPrice(item.precio)} <span className="text-xs text-gray-500">c/u</span>
+                          {/* Precio con descuento si corresponde */}
+                          <div className="font-semibold text-lg">
+                            {hasDiscount(item) ? (
+                              <>
+                                <span className="text-green-600">{formatPrice(getDiscountedPrice(item))}</span>
+                                <span className="text-xs text-gray-500 ml-2">c/u</span>
+                                <div className="text-xs">
+                                  <span className="line-through text-gray-400">{formatPrice(item.precio)}</span>
+                                  <span className="ml-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                    -{getDiscountPercentage(item)}%
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-[#FFD15C]">
+                                {formatPrice(item.precio)} <span className="text-xs text-gray-500">c/u</span>
+                              </span>
+                            )}
                           </div>
                           {/* Controles de cantidad */}
                           <div className="flex items-center bg-gray-100 rounded-lg overflow-hidden shadow-inner">
@@ -133,7 +221,7 @@ const Cart = () => {
                           {/* Subtotal y eliminar */}
                           <div className="flex items-center gap-4">
                             <div className="font-bold text-gray-700">
-                              {formatPrice(item.precio * item.cantidad)}
+                              {formatPrice(getDiscountedPrice(item) * item.cantidad)}
                             </div>
                             <button
                               onClick={() => removeFromCart(item._id)}
@@ -172,17 +260,28 @@ const Cart = () => {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">{formatPrice(total)}</span>
+                  <span className="font-semibold">{formatPrice(totals.discountedTotal)}</span>
                 </div>
+                
+                {/* Mostrar ahorro total si hay productos con descuento */}
+                {totals.savings > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Ahorro total</span>
+                    <span className="font-semibold">
+                      {formatPrice(totals.savings)}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between">
                   <span className="text-gray-600">Envío</span>
-                  {costoEnvio === 0 ? (
+                  {totals.costoEnvio === 0 ? (
                     <span className="font-semibold text-green-600 animate-pulse">GRATIS</span>
                   ) : (
-                    <span className="font-semibold">{formatPrice(costoEnvio)}</span>
+                    <span className="font-semibold">{formatPrice(totals.costoEnvio)}</span>
                   )}
                 </div>
-                {costoEnvio > 0 && (
+                {totals.costoEnvio > 0 && (
                   <div className="text-xs text-gray-500">
                     Envío gratis en compras superiores a <span className="font-semibold">{formatPrice(30000)}</span>
                   </div>
@@ -190,7 +289,7 @@ const Cart = () => {
                 <div className="h-px bg-gray-200 my-3"></div>
                 <div className="flex justify-between">
                   <span className="font-bold">Total</span>
-                  <span className="font-extrabold text-2xl text-[#FFD15C]">{formatPrice(totalConEnvio)}</span>
+                  <span className="font-extrabold text-2xl text-[#FFD15C]">{formatPrice(totals.totalConEnvio)}</span>
                 </div>
               </div>
               {currentUser ? (
