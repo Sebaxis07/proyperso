@@ -15,31 +15,6 @@ const Nosotros = () => {
   });
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchTestimonios = async () => {
-      try {
-        setLoading(true);
-        
-        const token = localStorage.getItem('authToken'); 
-        
-        const config = {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        };
-        
-        const response = await axios.get('/api/testimonios', config);
-        setTestimonios(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error al cargar testimonios:', err);
-        setLoading(false);
-      }
-    };
-  
-    fetchTestimonios();
-  }, []);
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,7 +23,34 @@ const Nosotros = () => {
       [name]: value
     }));
   };
-  
+
+  useEffect(() => {
+    const fetchTestimonios = async () => {
+      try {
+        setLoading(true);
+        
+        // No es necesario enviar token para obtener testimonios (ruta pública)
+        const response = await axios.get('/api/testimonios');
+        
+        if (response.data && Array.isArray(response.data)) {
+          setTestimonios(response.data);
+        } else {
+          console.error('Formato de respuesta inesperado:', response.data);
+          setError('Error al cargar testimonios: formato de datos inesperado');
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error al cargar testimonios:', err);
+        setError('Error al cargar testimonios. Por favor, intenta nuevamente.');
+        setLoading(false);
+      }
+    };
+
+    fetchTestimonios();
+  }, []);
+
+  // Función handleSubmit modificada para no requerir token
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -57,47 +59,67 @@ const Nosotros = () => {
       setError('Por favor, escribe un testimonio más detallado (mínimo 10 caracteres).');
       return;
     }
-  
+
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('authToken');
+      // Preparar datos del testimonio
+      const testimonioData = {
+        texto: formData.texto,
+        calificacion: formData.calificacion
+      };
       
-      if (!token) {
-        setError('No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.');
-        setLoading(false);
-        return;
+      // Si hay usuario autenticado, incluir información adicional
+      if (currentUser) {
+        testimonioData.usuarioId = currentUser.id || currentUser._id;
+        testimonioData.nombre = currentUser.nombre;
       }
       
+      // Configuración para la solicitud
       const config = {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         }
       };
       
-      await axios.post('/api/testimonios', {
-        ...formData,
-        usuarioId: currentUser.id,
-        nombre: currentUser.nombre,
-        fecha: new Date()
-      }, config);
+      // Intentar agregar token si existe (opcional)
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
       
-      const response = await axios.get('/api/testimonios', config);
-      setTestimonios(response.data);
+      // Enviar el testimonio (ahora funciona sin token)
+      const response = await axios.post('/api/testimonios', testimonioData, config);
       
-      setFormData({ texto: '', calificacion: 5 });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 5000);
+      if (response.data && response.data.success) {
+        // Obtener la lista actualizada de testimonios
+        const updatedTestimonios = await axios.get('/api/testimonios');
+        
+        if (updatedTestimonios.data && Array.isArray(updatedTestimonios.data)) {
+          setTestimonios(updatedTestimonios.data);
+        }
+        
+        // Limpiar el formulario y mostrar mensaje de éxito
+        setFormData({ texto: '', calificacion: 5 });
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 5000);
+      } else {
+        setError(response.data?.message || 'Error al enviar el testimonio. Inténtalo de nuevo.');
+      }
       
     } catch (err) {
+      console.error('Error al enviar testimonio:', err);
+      
       if (err.response) {
-        setError(err.response.data.message || 'Error al enviar tu testimonio. Por favor, intenta nuevamente.');
+        // Error de respuesta del servidor
+        setError(err.response.data?.message || 'Error al enviar tu testimonio. Por favor, intenta nuevamente.');
       } else if (err.request) {
+        // Error de conexión
         setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
       } else {
+        // Otro tipo de error
         setError('Error al enviar tu testimonio. Por favor, intenta nuevamente.');
       }
-      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -345,6 +367,10 @@ const Nosotros = () => {
                     src={testimonios[activeTestimonial].imagen || '/images/default-avatar.jpg'} 
                     alt={testimonios[activeTestimonial].nombre}
                     className="w-16 h-16 rounded-full object-cover mr-4"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/images/default-avatar.jpg';
+                    }}
                   />
                   <div>
                     <h3 className="font-bold text-lg">{testimonios[activeTestimonial].nombre}</h3>

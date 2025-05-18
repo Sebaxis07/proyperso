@@ -1,4 +1,4 @@
-// cliente/src/App.jsx
+// cliente/src/App.jsx - Modificación
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import AuthProvider from './context/AuthContext';
 import CartProvider from './context/CartContext';
@@ -7,6 +7,7 @@ import AdminRoute from './components/routing/AdminRoute';
 
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+import Chatbot from './components/chatbot/Chatbot'; // Importar el componente Chatbot
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -108,58 +109,60 @@ function App() {
                   </AdminRoute>
                 } />
                 <Route path="/admin/productos/nuevo" element={
-  <AdminRoute>
-    <ProductForm />
-  </AdminRoute>
-} />
-<Route path="/admin/productos/:id/editar" element={
-  <AdminRoute>
-    <ProductForm />
-  </AdminRoute>
-} />
+                  <AdminRoute>
+                    <ProductForm />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/productos/:id/editar" element={
+                  <AdminRoute>
+                    <ProductForm />
+                  </AdminRoute>
+                } />
 
-{/* Rutas de administración */}
-<Route path="/admin" element={
-  <AdminRoute>
-    <AdminDashboard />
-  </AdminRoute>
-} />
-<Route path="/admin/productos" element={
-  <AdminRoute>
-    <AdminProducts />
-  </AdminRoute>
-} />
-<Route path="/admin/productos/nuevo" element={
-  <AdminRoute>
-    <ProductForm />
-  </AdminRoute>
-} />
-<Route path="/admin/productos/:id/editar" element={
-  <AdminRoute>
-    <ProductForm />
-  </AdminRoute>
-} />
-<Route path="/admin/pedidos" element={
-  <AdminRoute>
-    <AdminOrders />
-  </AdminRoute>
-} />
-<Route path="/admin/usuarios" element={
-  <AdminRoute>
-    <AdminUsers />
-  </AdminRoute>
-} />
-<Route path="/admin/usuarios/nuevo" element={
-  <AdminRoute>
-    <NuevoUsuario />
-  </AdminRoute>
-} />
+                {/* Rutas de administración */}
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/productos" element={
+                  <AdminRoute>
+                    <AdminProducts />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/productos/nuevo" element={
+                  <AdminRoute>
+                    <ProductForm />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/productos/:id/editar" element={
+                  <AdminRoute>
+                    <ProductForm />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/pedidos" element={
+                  <AdminRoute>
+                    <AdminOrders />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/usuarios" element={
+                  <AdminRoute>
+                    <AdminUsers />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/usuarios/nuevo" element={
+                  <AdminRoute>
+                    <NuevoUsuario />
+                  </AdminRoute>
+                } />
                 
                 {/* Ruta 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
             <Footer />
+            {/* Componente Chatbot - Se muestra en todas las páginas */}
+            <Chatbot />
           </div>
         </Router>
       </CartProvider>

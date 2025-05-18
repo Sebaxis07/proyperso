@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthContext } from '../../context/AuthContext';
 import { CartContext } from '../../context/CartContext';
+import { FaSearch, FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
 import logo from '../../assets/Logo.png';
 
 const Navbar = () => {
@@ -12,7 +13,9 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSearchBar, setShowSearchBar] = useState(false);
   const location = useLocation();
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +27,14 @@ const Navbar = () => {
 
   useEffect(() => {
     setIsMenuOpen(false);
+    setShowSearchBar(false);
   }, [location]);
+
+  useEffect(() => {
+    if (showSearchBar && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearchBar]);
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
@@ -35,13 +45,40 @@ const Navbar = () => {
     logout();
   };
 
+  const toggleSearchBar = () => {
+    setShowSearchBar(!showSearchBar);
+  };
+
   return (
     <>
+      {/* Top Bar - siempre visible */}
+      <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] text-white py-2 hidden md:block">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-6 text-sm">
+              <div className="flex items-center">
+                <FaMapMarkerAlt className="text-[#FFD15C] mr-2" />
+                <span className="text-gray-300">Av. Esmeralda #1993, Antofagasta</span>
+              </div>
+              <div className="flex items-center">
+                <FaPhone className="text-[#FFD15C] mr-2" />
+                <span className="text-gray-300">+56 2 2123 4567</span>
+              </div>
+            </div>
+            <div className="text-sm text-gray-300">
+              <span className="mr-2">Horario:</span>
+              <span className="text-[#FFD15C]">Lun-Vie: 09:00-20:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navbar principal */}
       <nav 
-        className={`fixed w-full top-0 transition-all duration-300 z-50 
+        className={`sticky w-full top-0 transition-all duration-300 z-50 
         ${isScrolled 
           ? 'bg-white shadow-lg' 
-          : 'bg-white/90 backdrop-blur-md border-b border-gray-200'
+          : 'bg-white shadow-sm'
         }`}
       >
         <div className="container mx-auto px-4 lg:px-8">
@@ -53,13 +90,15 @@ const Navbar = () => {
               className="flex-shrink-0"
             >
               <Link to="/" className="flex items-center space-x-3">
-                <img 
-                  src={logo} 
-                  alt="Lucky Pet Shop Logo" 
-                  className="h-12 w-12 object-contain" 
-                />
+                <div className="bg-white p-2 rounded-lg shadow-[0_0_15px_rgba(255,209,92,0.5)]">
+                  <img 
+                    src={logo} 
+                    alt="Lucky Pet Shop Logo" 
+                    className="h-12 w-12 object-contain" 
+                  />
+                </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  <span className="text-xl font-bold bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] bg-clip-text text-transparent">
                     Lucky Pet Shop
                   </span>
                   <span className="text-sm text-[#FFD15C] font-medium">
@@ -69,11 +108,53 @@ const Navbar = () => {
               </Link>
             </motion.div>
 
-            <div className="hidden md:flex items-center space-x-2">
+            {/* Search Bar - visible solo cuando se activa */}
+            <AnimatePresence>
+              {showSearchBar && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "100%" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="absolute left-0 top-0 bg-white h-20 z-10 flex items-center justify-center px-8"
+                >
+                  <div className="w-full max-w-3xl flex items-center border-b-2 border-[#FFD15C]">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Buscar productos, marcas, categorías..."
+                      className="w-full py-2 px-4 outline-none text-gray-700"
+                    />
+                    <button className="p-2 text-[#FFD15C]">
+                      <FaSearch />
+                    </button>
+                    <button 
+                      onClick={toggleSearchBar}
+                      className="p-2 text-gray-500 hover:text-gray-700"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Enlaces de navegación - desktop */}
+            <div className="hidden md:flex items-center space-x-1">
               <NavLink to="/">Inicio</NavLink>
               <NavLink to="/productos">Productos</NavLink>
               <NavLink to="/nosotros">Nosotros</NavLink>
               <NavLink to="/contacto">Contacto</NavLink>
+              
+              {/* Botón de búsqueda */}
+              <button 
+                onClick={toggleSearchBar}
+                className="p-2 ml-2 rounded-full hover:bg-[#FFF8E7] text-gray-700 hover:text-[#FFD15C] transition-all duration-200"
+                aria-label="Buscar"
+              >
+                <FaSearch />
+              </button>
               
               {currentUser ? (
                 <UserMenu currentUser={currentUser} onLogoutClick={handleLogoutClick} />
@@ -84,7 +165,15 @@ const Navbar = () => {
               <CartButton itemCount={itemCount} />
             </div>
 
+            {/* Botones móviles */}
             <div className="md:hidden flex items-center space-x-4">
+              <button 
+                onClick={toggleSearchBar}
+                className="p-2 rounded-full hover:bg-[#FFF8E7] text-gray-700 hover:text-[#FFD15C] transition-all duration-200"
+                aria-label="Buscar"
+              >
+                <FaSearch />
+              </button>
               <CartButton itemCount={itemCount} />
               <MobileMenuButton isOpen={isMenuOpen} onClick={() => setIsMenuOpen(!isMenuOpen)} />
             </div>
@@ -95,7 +184,6 @@ const Navbar = () => {
           {isMenuOpen && <MobileMenu currentUser={currentUser} onLogoutClick={handleLogoutClick} />}
         </AnimatePresence>
       </nav>
-      <div className="h-20"></div>
       
       <ConfirmLogoutModal
         isOpen={showLogoutModal}
@@ -113,13 +201,15 @@ const NavLink = ({ to, children }) => {
   return (
     <Link
       to={to}
-      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
+      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 relative group
         ${isActive 
           ? 'text-[#FFD15C] bg-[#FFF8E7]' 
-          : 'text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]'
+          : 'text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]/50'
         }`}
     >
       {children}
+      <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-[#FFD15C] transition-all duration-300 
+                        ${isActive ? 'w-1/2' : 'w-0 group-hover:w-1/4'}`} />
     </Link>
   );
 };
@@ -161,13 +251,13 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-xl py-2 z-50 border border-gray-100"
+          className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl py-2 z-50 border border-gray-100"
         >
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-800">{currentUser.nombre} {currentUser.apellido}</p>
-            <p className="text-xs text-gray-500">{currentUser.email}</p>
-            <div className={`text-xs mt-1 inline-block px-2 py-0.5 rounded-full font-medium ${
-              currentUser?.rol === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+            <p className="text-xs text-gray-500 mt-1">{currentUser.email}</p>
+            <div className={`text-xs mt-2 inline-block px-2 py-0.5 rounded-full font-medium ${
+              currentUser?.rol === 'admin' ? 'bg-[#FFD15C]/20 text-[#FFD15C]' : 'bg-green-100 text-green-700'
             }`}>
               {currentUser?.rol === 'admin' ? 'Administrador' : 'Cliente'}
             </div>
@@ -176,9 +266,10 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
           <div className="py-1">
             <Link
               to="/perfil"
-              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+              <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -186,13 +277,25 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
             </Link>
             <Link
               to="/pedidos"
-              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+              <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               Mis Pedidos
+            </Link>
+            <Link
+              to="/favoritos"
+              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
+            >
+              <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+              <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              Mis Favoritos
             </Link>
           </div>
 
@@ -205,9 +308,10 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
               </div>
               <Link
                 to="/admin"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2z" />
                 </svg>
@@ -215,9 +319,10 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
               </Link>
               <Link
                 to="/admin/productos"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
@@ -225,9 +330,10 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
               </Link>
               <Link
                 to="/admin/pedidos"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
@@ -235,9 +341,10 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
               </Link>
               <Link
                 to="/admin/usuarios"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
@@ -245,9 +352,10 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
               </Link>
               <Link
                 to="/admin/reportes"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7]"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -259,8 +367,9 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
           <div className="py-1 border-t border-gray-100">
             <button
               onClick={onLogoutClick}
-              className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 group"
             >
+              <span className="h-[2px] w-0 bg-red-500 mr-2 transition-all duration-300 group-hover:w-4" />
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -285,7 +394,7 @@ const AuthButtons = () => {
       </Link>
       <Link
         to="/register"
-        className="px-4 py-2 rounded-full text-sm font-medium bg-[#FFD15C] text-white hover:bg-[#FFC132] transition-all duration-200"
+        className="px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-[#FFD15C] to-[#FFC132] text-white hover:from-[#FFC132] hover:to-[#FFB100] transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
       >
         Registrarse
       </Link>
@@ -314,7 +423,7 @@ const CartButton = ({ itemCount }) => {
         />
       </svg>
       {itemCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+        <span className="absolute -top-1 -right-1 bg-gradient-to-r from-[#FFD15C] to-[#FFC132] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
           {itemCount > 99 ? '99+' : itemCount}
         </span>
       )}
@@ -362,14 +471,15 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="absolute top-20 inset-x-0 bg-white/95 backdrop-blur-md shadow-lg py-4 border-b border-gray-200"
+        className="absolute top-20 inset-x-0 bg-white shadow-lg py-4 border-b border-gray-200 z-40"
       >
         <div className="container mx-auto px-4 space-y-1">
           <Link
             to="/"
-            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
           >
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+            <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
               d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
@@ -377,9 +487,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
           </Link>
           <Link
             to="/productos"
-            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
           >
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+            <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
@@ -388,9 +499,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
           
           <Link
             to="/nosotros"
-            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
           >
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+            <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
@@ -398,9 +510,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
           </Link>
           <Link
             to="/contacto"
-            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+            className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
           >
-            <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+            <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
               d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
@@ -417,7 +530,7 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                 </div>
                 <div className="px-4 py-1">
                   <span className={`text-xs inline-block px-2 py-0.5 rounded-full font-medium ${
-                    currentUser?.rol === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                    currentUser?.rol === 'admin' ? 'bg-[#FFD15C]/20 text-[#FFD15C]' : 'bg-green-100 text-green-700'
                   }`}>
                     {currentUser?.rol === 'admin' ? 'Administrador' : 'Cliente'}
                   </span>
@@ -425,9 +538,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
               </div>
               <Link
                 to="/perfil"
-                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
               >
-                <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -435,9 +549,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
               </Link>
               <Link
                 to="/mis-pedidos"
-                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
               >
-                <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
@@ -445,9 +560,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
               </Link>
               <Link
                 to="/favoritos"
-                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
               >
-                <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
@@ -466,9 +582,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                   </div>
                   <Link
                     to="/admin"
-                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                   >
-                    <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2z" />
                     </svg>
@@ -476,9 +593,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                   </Link>
                   <Link
                     to="/admin/productos"
-                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                   >
-                    <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
@@ -486,9 +604,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                   </Link>
                   <Link
                     to="/admin/pedidos"
-                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                   >
-                    <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
@@ -496,31 +615,21 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                   </Link>
                   <Link
                     to="/admin/usuarios"
-                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                   >
-                    <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                       Usuarios
                     </Link>
                     <Link
-                      to="/admin/configuracion"
-                      className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
-                    >
-                      <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      Configuración
-                    </Link>
-                    <Link
                       to="/admin/reportes"
-                      className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                      className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                     >
-                      <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                      <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                         d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -532,8 +641,9 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                 <div className="pt-3 pb-1 border-t border-gray-200 mt-2">
                   <button
                     onClick={onLogoutClick}
-                    className="flex w-full items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg"
+                    className="flex w-full items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg group"
                   >
+                    <span className="h-[2px] w-0 bg-red-500 mr-2 transition-all duration-300 group-hover:w-4" />
                     <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -553,9 +663,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                 </div>
                 <Link
                   to="/login"
-                  className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                  className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                 >
-                  <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                  <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                   </svg>
@@ -563,9 +674,10 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                 </Link>
                 <Link
                   to="/register"
-                  className="flex items-center px-4 py-3 text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg"
+                  className="flex items-center px-4 py-3 text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
                 >
-                  <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                  <svg className="w-5 h-5 mr-3 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>
@@ -613,7 +725,7 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                 </button>
                 <button
                   onClick={onConfirm}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 transition-colors shadow-md"
                 >
                   Cerrar Sesión
                 </button>

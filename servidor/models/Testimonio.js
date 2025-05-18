@@ -1,22 +1,19 @@
-import { Schema, model } from 'mongoose';
+import mongoose from 'mongoose';
 
-const testimonioSchema = new Schema({
-  usuarioId: {
-    type: String,
-    required: true
+const TestimonioSchema = new mongoose.Schema({
+  usuario: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',  // Mantiene la referencia al modelo Usuario
+    required: false  // Cambiado a false para permitir testimonios sin usuario
   },
   nombre: {
     type: String,
     required: true
   },
-  cargo: {
-    type: String,
-    default: 'Cliente'
-  },
   texto: {
     type: String,
     required: true,
-    minlength: 10
+    minlength: [10, 'El testimonio debe tener al menos 10 caracteres']
   },
   calificacion: {
     type: Number,
@@ -28,10 +25,18 @@ const testimonioSchema = new Schema({
     type: Date,
     default: Date.now
   },
+  cargo: {
+    type: String,
+    default: 'Cliente'
+  },
   imagen: {
     type: String,
-    default: null // URL de la imagen de perfil del usuario
+    default: null
+  },
+  aprobado: {
+    type: Boolean,
+    default: true  // Por defecto, aprobamos los testimonios
   }
 });
 
-export default model('Testimonio', testimonioSchema);
+export default mongoose.model('Testimonio', TestimonioSchema);

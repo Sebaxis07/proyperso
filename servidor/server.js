@@ -14,7 +14,8 @@ import usuariosRoutes from './routes/usuarios.js';
 import uploadRoutes from './routes/upload.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import exportRoutes from './routes/export.routes.js';
-
+import chatbotRoutes from './routes/chatbot.js';
+import testimonioRoutes from './routes/testimonio.js';
 // ES Module fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,7 +98,6 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Servir archivos estáticos - IMPORTANTE: esto debe estar antes de las rutas API
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
-import testimonioRoutes from './routes/testimonio.js'; 
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
@@ -107,6 +107,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/reportes', exportRoutes);
 app.use('/api/testimonios', testimonioRoutes);
+app.use('/api/chatbot', chatbotRoutes);
  // Las rutas de exportación también están bajo /api/reportes
 
 // Ruta de prueba
