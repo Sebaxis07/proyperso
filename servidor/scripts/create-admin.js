@@ -1,28 +1,27 @@
 // servidor/scripts/create-admin.js
-import { connect, disconnect } from 'mongoose';
+import mongoose from 'mongoose';
 import Usuario from '../models/Usuario.js';
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 
 // Cargar variables de entorno
-config();
-
-// Conectar a MongoDB
-connect(process.env.MONGO_URI)
-  .then(() => console.log('Conectado a MongoDB'))
-  .catch(err => console.error('Error al conectar a MongoDB:', err));
+dotenv.config();
 
 const createAdmin = async () => {
   try {
+    // Conectar a MongoDB
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('Conectado a MongoDB');
+
     // Verificar si ya existe un admin
     const adminExists = await Usuario.findOne({ rol: 'admin' });
-    
+
     if (adminExists) {
       console.log('Ya existe un usuario administrador:');
       console.log(`Email: ${adminExists.email}`);
       console.log(`RUT: ${adminExists.rut}`);
       return;
     }
-    
+
     // Crear nuevo administrador
     const admin = new Usuario({
       nombre: 'Admin',
@@ -40,7 +39,7 @@ const createAdmin = async () => {
       },
       rol: 'admin'
     });
-    
+
     await admin.save();
     console.log('Administrador creado con éxito');
     console.log('Credenciales:');
@@ -50,7 +49,12 @@ const createAdmin = async () => {
   } catch (err) {
     console.error('Error al crear administrador:', err);
   } finally {
-    disconnect();
+    try {
+      await mongoose.disconnect();
+      console.log('Desconectado de MongoDB');
+    } catch (err) {
+      console.error('Error al desconectar de MongoDB:', err);
+    }
   }
 };
 

@@ -363,18 +363,27 @@ const Nosotros = () => {
                 className="bg-white p-8 rounded-xl shadow-lg"
               >
                 <div className="flex items-center mb-6">
-                  <img 
-                    src={testimonios[activeTestimonial].imagen || '/images/default-avatar.jpg'} 
-                    alt={testimonios[activeTestimonial].nombre}
-                    className="w-16 h-16 rounded-full object-cover mr-4"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/images/default-avatar.jpg';
-                    }}
-                  />
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden mr-4 border-2 border-[#FFD15C]">
+                    <img 
+                      src={
+                        testimonios[activeTestimonial].usuarioFoto 
+                          ? testimonios[activeTestimonial].usuarioFoto.startsWith('avatar') 
+                            ? `src/img/ProfilePred/${testimonios[activeTestimonial].usuarioFoto}`
+                            : `/uploads/profiles/${testimonios[activeTestimonial].usuarioFoto}`
+                          : 'src/img/ProfilePred/perro.jpg'
+                      }
+                      alt={testimonios[activeTestimonial].nombre}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'src/img/ProfilePred/perro.jpg';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/10 hover:bg-black/0 transition-colors"></div>
+                  </div>
                   <div>
                     <h3 className="font-bold text-lg">{testimonios[activeTestimonial].nombre}</h3>
-                    <p className="text-gray-600">{testimonios[activeTestimonial].cargo || 'Cliente'}</p>
+                    <p className="text-gray-600">Cliente verificado</p>
                     <div className="flex items-center mt-1">
                       {[...Array(5)].map((_, i) => (
                         <FaStar 
@@ -392,7 +401,7 @@ const Nosotros = () => {
                     </div>
                   </div>
                 </div>
-                <p className="text-gray-700 italic">{testimonios[activeTestimonial].texto}</p>
+                <p className="text-gray-700 italic leading-relaxed">{testimonios[activeTestimonial].texto}</p>
               </motion.div>
               <div className="flex justify-center mt-8 space-x-2">
                 {testimonios.map((_, index) => (

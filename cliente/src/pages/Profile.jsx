@@ -1,8 +1,18 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import InfoCard, { UserIcon, EmailIcon, PhoneIcon, IdIcon } from '../components/InfoCard';
 import axios from 'axios';
+import { toast } from 'react-toastify';
+
+// Avatares predeterminados
+const avatarsPredeterminados = [
+  { id: 'avatar1.png', src: 'src/img/ProfilePred/perro.jpg', alt: 'Avatar 1' },
+  { id: 'avatar2.png', src: 'src/img/ProfilePred/gato.jpg', alt: 'Avatar 2' },
+  { id: 'avatar3.png', src: 'src/img/ProfilePred/hamster.webp', alt: 'Avatar 3' },
+  { id: 'avatar4.png', src: 'src/img/ProfilePred/ave.jpg', alt: 'Avatar 4' },
+  { id: 'avatar5.png', src: 'src/img/ProfilePred/raton.jpg', alt: 'Avatar 5' },
+];
 
 const Profile = () => {
   const { currentUser, updateProfile, error } = useContext(AuthContext);
@@ -10,6 +20,12 @@ const Profile = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [pedidosCount, setPedidosCount] = useState(0);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef(null);
+  const [avatarKey, setAvatarKey] = useState(Date.now());
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -40,6 +56,11 @@ const Profile = () => {
           codigoPostal: currentUser.direccion?.codigoPostal || ''
         }
       });
+
+      // Establecer el avatar predeterminado basado en el usuario actual
+      if (currentUser.fotoPerfil) {
+        setSelectedAvatar(currentUser.fotoPerfil);
+      }
     }
   }, [currentUser]);
 
@@ -120,12 +141,344 @@ const Profile = () => {
       try {
         await updateProfile(formData);
         setIsEditing(false);
+        toast.success('Perfil actualizado correctamente');
       } catch (err) {
+        console.error("Error al actualizar perfil:", err);
+        toast.error('Error al actualizar el perfil');
       } finally {
         setIsSubmitting(false);
       }
     }
   };
+
+  const handleAvatarClick = (avatarId) => {
+    setSelectedAvatar(avatarId);
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!selectedAvatar) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/api/usuarios/${currentUser._id}/foto-predeterminada`, 
+        { fotoPerfil: selectedAvatar },
+        { headers: { 'Authorization': `Bearer ${token}` }}
+      );
+
+      // Actualizar el contexto del usuario con la nueva foto
+      updateProfile({ fotoPerfil: selectedAvatar, tipoFoto: 'predeterminada' });
+      setShowAvatarModal(false);
+
+      // Mostrar notificación de éxito
+      toast.success('Foto de perfil actualizada correctamente');
+
+      // Forzar la actualización del componente ProfilePicture
+      setAvatarKey(Date.now());
+
+    } catch (error) {
+      console.error('Error al actualizar la foto de perfil:', error);
+      toast.error('Error al actualizar la foto de perfil');
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    if (!e.target.files || !e.target.files[0]) return;
+
+    const file = e.target.files[0];
+    
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen');
+      return;
+    }
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('El tamaño de la imagen no puede exceder 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append('fotoPerfil', file);
+
+    const token = localStorage.getItem('token');
+    
+    axios.post(`/api/usuarios/${currentUser._id}/foto`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${token}`
+      },
+      onUploadProgress: (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress(progress);
+      }
+    })
+    .then(response => {
+      // Actualizar el contexto del usuario con la nueva foto
+      updateProfile({
+        fotoPerfil: response.data.data.fotoPerfil,
+        tipoFoto: response.data.data.tipoFoto
+      });
+      setShowAvatarModal(false);
+      toast.success('Foto de perfil subida correctamente');
+    })
+    .catch(error => {
+      console.error('Error al subir la foto:', error);
+      toast.error('Error al subir la foto de perfil');
+    })
+    .finally(() => {
+      setIsUploading(false);
+      setUploadProgress(0);
+    });
+  };
+
+  const getProfileImageUrl = () => {
+  if (!currentUser || !currentUser.fotoPerfil) {
+    return 'src/img/ProfilePred/perro.jpg'; // Imagen por defecto
+  }
+
+  // Si el usuario eligió una foto predeterminada
+  if (currentUser.tipoFoto === 'predeterminada') {
+    // Buscar la foto predeterminada en el array
+    const avatarPredeterminado = avatarsPredeterminados.find(
+      avatar => avatar.id === currentUser.fotoPerfil
+    );
+    return avatarPredeterminado ? avatarPredeterminado.src : 'src/img/ProfilePred/perro.jpg';
+  }
+
+  // Si el usuario subió una foto personalizada
+  if (currentUser.tipoFoto === 'personalizada') {
+    return `/uploads/profiles/${currentUser.fotoPerfil}`;
+  }
+
+  // Si por alguna razón no hay tipo de foto definido, usar imagen por defecto
+  return 'src/img/ProfilePred/perro.jpg';
+};
+
+  // Componente de Modal para seleccionar o subir avatar
+  const AvatarModal = () => {
+    if (!showAvatarModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm animate-fadeIn">
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-2xl w-full mx-4 transform transition-all animate-modalShow">
+          {/* Header */}
+          <div className="bg-white px-8 py-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-1">
+                  Foto de Perfil
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  Personaliza tu imagen de perfil
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowAvatarModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-8">
+            {/* Upload Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4">
+                Sube una foto
+              </h4>
+              <div className="bg-gray-50 rounded-2xl p-6 border-2 border-dashed border-gray-200">
+                <PhotoUploadButton />
+                <p className="text-sm text-gray-500 text-center mt-3">
+                  Formato JPG, PNG o WEBP (Max. 5MB)
+                </p>
+                <UploadProgressBar />
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-white text-gray-500 font-medium">
+                  O elige un avatar predeterminado
+                </span>
+              </div>
+            </div>
+
+            {/* Avatar Grid */}
+            <div className="grid grid-cols-5 gap-4">
+              {avatarsPredeterminados.map((avatar) => (
+                <button
+                  key={avatar.id}
+                  onClick={() => handleAvatarClick(avatar.id)}
+                  className={`group relative aspect-square rounded-2xl overflow-hidden transition-all duration-300
+                    ${selectedAvatar === avatar.id 
+                      ? 'ring-4 ring-[#FFD15C] ring-offset-2 scale-105' 
+                      : 'hover:ring-2 hover:ring-[#FFD15C]/50 hover:ring-offset-2 hover:scale-105'
+                    }`}
+                >
+                  <img 
+                    src={avatar.src} 
+                    alt={avatar.alt} 
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+                  {selectedAvatar === avatar.id && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center backdrop-blur-[2px]">
+                      <div className="bg-white/90 rounded-full p-2">
+                        <svg className="w-6 h-6 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="bg-gray-50 px-8 py-5 flex justify-end gap-3 border-t border-gray-100">
+            <button
+              onClick={() => setShowAvatarModal(false)}
+              className="px-6 py-2.5 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors font-medium"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSaveAvatar}
+              disabled={!selectedAvatar || isUploading}
+              className="px-6 py-2.5 bg-[#FFD15C] text-white rounded-xl hover:bg-[#FFC132] transition-all 
+                font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2
+                transform hover:translate-y-[-1px] hover:shadow-lg active:translate-y-[1px]"
+            >
+              {isUploading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                  </svg>
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <span>Guardar cambios</span>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+            
+
+  // Componentes auxiliares
+  const PhotoUploadButton = () => (
+    <button
+      type="button"
+      onClick={() => fileInputRef.current.click()}
+      className="w-full py-3 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+      disabled={isUploading}
+    >
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      {isUploading ? 'Subiendo...' : 'Subir foto desde tu dispositivo'}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="image/*"
+        className="hidden"
+        disabled={isUploading}
+      />
+    </button>
+  );
+
+  const UploadProgressBar = () => {
+    if (!isUploading) return null;
+    
+    return (
+      <div className="w-full mt-4">
+        <div className="relative pt-1">
+          <div className="flex mb-2 items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-[#FFD15C] bg-[#FFD15C]/20">
+                Subiendo...
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-xs font-semibold inline-block text-[#FFD15C]">
+                {uploadProgress}%
+              </span>
+            </div>
+          </div>
+          <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-[#FFD15C]/20">
+            <div
+              style={{ width: `${uploadProgress}%` }}
+              className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-[#FFD15C] transition-all duration-300"
+            ></div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ProfilePicture = () => (
+    <div key={avatarKey} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 p-8">
+      <div className="flex flex-col items-center">
+        <div className="relative group">
+          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#FFD15C] mb-4">
+            <img
+              src={getProfileImageUrl()}
+              alt="Foto de perfil"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = '/images/avatars/default-avatar.png';
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setShowAvatarModal(true)}
+            className="absolute bottom-4 right-0 bg-[#FFD15C] text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-[#FFC132]"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+        </div>
+        
+        <h3 className="text-xl font-bold text-gray-900">
+          {currentUser?.nombre} {currentUser?.apellido}
+        </h3>
+        <p className="text-gray-600 mb-4">{currentUser?.email}</p>
+        
+        <button
+          onClick={() => setShowAvatarModal(true)}
+          className="py-2 px-4 bg-[#FFD15C]/10 text-[#FFD15C] rounded-lg text-sm font-medium hover:bg-[#FFD15C]/20 transition-colors flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Cambiar foto
+        </button>
+      </div>
+    </div>
+  );
 
   const ResumenCuenta = () => (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 sticky top-8 transform hover:scale-[1.02] transition-all duration-300">
@@ -224,6 +577,9 @@ const Profile = () => {
             Gestiona tu información personal y preferencias de envío
           </p>
         </div>
+
+        {/* Modal de foto de perfil */}
+        <AvatarModal />
 
         <div className="fixed bottom-8 right-8 flex flex-col gap-4 z-50">
           <Link
@@ -458,6 +814,7 @@ const Profile = () => {
 
           {/* Panel Lateral */}
           <div className="lg:col-span-4 space-y-8">
+            <ProfilePicture />
             <ResumenCuenta />
           </div>
         </div>

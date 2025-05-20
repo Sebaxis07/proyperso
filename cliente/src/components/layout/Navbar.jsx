@@ -1,4 +1,3 @@
-// cliente/src/components/layout/Navbar.jsx
 import { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -364,6 +363,51 @@ const UserMenu = ({ currentUser, onLogoutClick }) => {
             </div>
           )}
 
+          {currentUser?.rol === 'empleado' && (
+            <>
+              <div className="py-1 border-t border-gray-100">
+                <div className="px-4 py-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Panel de Empleado
+                  </span>
+                </div>
+                <Link
+                  to="/empleado/pedidos"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
+                >
+                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                  <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Gestionar Pedidos
+                </Link>
+                <Link
+                  to="/empleado/productos"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
+                >
+                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                  <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  Gestionar Stock
+                </Link>
+                <Link
+                  to="/empleado/chat"
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] group"
+                >
+                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                  <svg className="w-4 h-4 mr-2 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Chat con Clientes
+                </Link>
+              </div>
+            </>
+          )}
+
           <div className="py-1 border-t border-gray-100">
             <button
               onClick={onLogoutClick}
@@ -621,72 +665,117 @@ const MobileMenu = ({ currentUser, onLogoutClick }) => {
                     <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                      Usuarios
-                    </Link>
-                    <Link
-                      to="/admin/reportes"
-                      className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
-                    >
-                      <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
-                      <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Reportes
-                    </Link>
-                  </>
-                )}
-  
-                <div className="pt-3 pb-1 border-t border-gray-200 mt-2">
-                  <button
-                    onClick={onLogoutClick}
-                    className="flex w-full items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg group"
-                  >
-                    <span className="h-[2px] w-0 bg-red-500 mr-2 transition-all duration-300 group-hover:w-4" />
-                    <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                     </svg>
-                    Cerrar Sesión
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="pt-3 pb-1 border-t border-gray-200 mt-2">
-                  <div className="px-4 py-1">
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acceso
-                    </span>
+                    Usuarios
+                  </Link>
+                  <Link
+                    to="/admin/reportes"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
+                  >
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Reportes
+                  </Link>
+                </>
+              )}
+
+              {currentUser.rol === 'empleado' && (
+                <>
+                  <div className="pt-3 pb-1 border-t border-gray-200 mt-2">
+                    <div className="px-4 py-1">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Panel de Empleado
+                      </span>
+                    </div>
                   </div>
+                  <Link
+                    to="/empleado/pedidos"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
+                  >
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Gestionar Pedidos
+                  </Link>
+                  <Link
+                    to="/empleado/productos"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
+                  >
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    Gestionar Stock
+                  </Link>
+                  <Link
+                    to="/empleado/chat"
+                    className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
+                  >
+                    <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                    <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    Chat con Clientes
+                  </Link>
+                </>
+              )}
+
+              <div className="pt-3 pb-1 border-t border-gray-200 mt-2">
+                <button
+                  onClick={onLogoutClick}
+                  className="flex w-full items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg group"
+                >
+                  <span className="h-[2px] w-0 bg-red-500 mr-2 transition-all duration-300 group-hover:w-4" />
+                  <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Cerrar Sesión
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="pt-3 pb-1 border-t border-gray-200 mt-2">
+                <div className="px-4 py-1">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acceso
+                  </span>
                 </div>
-                <Link
-                  to="/login"
-                  className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
-                >
-                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
-                  <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                  </svg>
-                  Iniciar Sesión
-                </Link>
-                <Link
-                  to="/register"
-                  className="flex items-center px-4 py-3 text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
-                >
-                  <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
-                  <svg className="w-5 h-5 mr-3 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  Registrarse
-                </Link>
-              </>
-            )}
-          </div>
-        </motion.div>
+              </div>
+              <Link
+                to="/login"
+                className="flex items-center px-4 py-3 text-gray-700 hover:text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
+              >
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Iniciar Sesión
+              </Link>
+              <Link
+                to="/register"
+                className="flex items-center px-4 py-3 text-[#FFD15C] hover:bg-[#FFF8E7] rounded-lg group"
+              >
+                <span className="h-[2px] w-0 bg-[#FFD15C] mr-2 transition-all duration-300 group-hover:w-4" />
+                <svg className="w-5 h-5 mr-3 text-[#FFD15C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Registrarse
+              </Link>
+            </>
+          )}
+        </div>
+      </motion.div>
       </>
     );
   };

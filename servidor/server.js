@@ -1,3 +1,4 @@
+// server.js - Versión simplificada con Socket.IO opcional
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -6,6 +7,8 @@ import fileUpload from 'express-fileupload';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import http from 'http';
+import { initializeSocketIO } from './socketConfig.js'; // Importar configuración de Socket.IO
 
 import authRoutes from './routes/auth.js';
 import productosRoutes from './routes/productos.js';
@@ -16,6 +19,8 @@ import reportesRoutes from './routes/reportes.routes.js';
 import exportRoutes from './routes/export.routes.js';
 import chatbotRoutes from './routes/chatbot.js';
 import testimonioRoutes from './routes/testimonio.js';
+import solicitudCancelacionRoutes from './routes/solicitudCancelacion.js';
+
 // ES Module fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +30,9 @@ dotenv.config();
 
 const app = express();
 
+// Crear servidor HTTP
+const server = http.createServer(app);
+
 // Asegurar que el directorio de subidas existe
 const uploadsDir = path.join(__dirname, 'public/uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -33,7 +41,10 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "*",
+  credentials: true
+}));
 app.use(express.json());
 
 // Configurar fileUpload
@@ -93,7 +104,20 @@ app.use((req, res, next) => {
 
 // Conectar a MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Conectado a MongoDB'))
+  .then(() => {
+    console.log('Conectado a MongoDB');
+    
+    // Inicializar Socket.IO DESPUÉS de conectar a MongoDB
+    try {
+      const io = initializeSocketIO(server);
+      app.set('io', io); // Hacer disponible io para los controladores
+      console.log('Socket.IO inicializado correctamente');
+    } catch (socketError) {
+      // Si hay error en Socket.IO, continuar sin él
+      console.error('Error al inicializar Socket.IO:', socketError);
+      console.log('La aplicación continuará sin funcionalidad en tiempo real');
+    }
+  })
   .catch(err => console.error('Error al conectar a MongoDB:', err));
 
 // Servir archivos estáticos - IMPORTANTE: esto debe estar antes de las rutas API
@@ -108,7 +132,7 @@ app.use('/api/reportes', reportesRoutes);
 app.use('/api/reportes', exportRoutes);
 app.use('/api/testimonios', testimonioRoutes);
 app.use('/api/chatbot', chatbotRoutes);
- // Las rutas de exportación también están bajo /api/reportes
+app.use('/api/solicitudes-cancelacion', solicitudCancelacionRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -128,7 +152,8 @@ app.use((err, req, res, next) => {
 // Puerto
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Usar server.listen en lugar de app.listen para Socket.IO
+server.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
   console.log(`Directorio de imágenes: ${path.join(__dirname, 'public/uploads')}`);
 });

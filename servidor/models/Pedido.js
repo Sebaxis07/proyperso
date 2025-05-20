@@ -1,16 +1,49 @@
 // servidor/models/Pedido.js
-import { Schema, model } from 'mongoose';
+import mongoose from 'mongoose';
 
-const PedidoSchema = new Schema({
+const EventoSeguimientoSchema = new mongoose.Schema({
+  fecha: {
+    type: Date,
+    default: Date.now
+  },
+  estado: {
+    type: String,
+    required: true
+  }
+});
+
+const SeguimientoSchema = new mongoose.Schema({
+  numeroSeguimiento: {
+    type: String,
+    required: true
+  },
+  empresa: {
+    type: String,
+    required: true
+  },
+  fechaEnvio: {
+    type: Date,
+    default: Date.now
+  },
+  urlSeguimiento: {
+    type: String
+  },
+  estimatedDelivery: {
+    type: Date
+  },
+  historia: [EventoSeguimientoSchema]
+});
+
+const PedidoSchema = new mongoose.Schema({
   usuario: {
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',
     required: true
   },
   productos: [
     {
       producto: {
-        type: Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Producto',
         required: true
       },
@@ -71,7 +104,21 @@ const PedidoSchema = new Schema({
   comprobantePago: {
     type: String
   },
+  // Nuevo campo para seguimiento
+  seguimiento: SeguimientoSchema,
+  // Campo para registrar quién procesa el pedido (empleado)
+  procesadoPor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario'
+  },
+  notasInternas: {
+    type: String
+  },
   createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
     type: Date,
     default: Date.now
   }
@@ -88,7 +135,25 @@ PedidoSchema.pre('save', async function(next) {
     
     this.numeroPedido = `PM-${año}${mes}${dia}-${random}`;
   }
+  
+  // Actualizar fecha de modificación
+  this.updatedAt = Date.now();
+  
   next();
 });
 
-export default model('Pedido', PedidoSchema);
+let Pedido;
+
+try {
+  // Intenta obtener el modelo si ya está definido
+  Pedido = mongoose.model('Pedido');
+} catch (e) {
+  // Si el modelo no está definido, créalo
+  if (e.name === 'MissingSchemaError') {
+    Pedido = mongoose.model('Pedido', PedidoSchema);
+  } else {
+    throw e;
+  }
+}
+
+export default Pedido;

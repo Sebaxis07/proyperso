@@ -7,6 +7,7 @@ const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState(null); // Nuevo estado para el rol
 
   useEffect(() => {
     checkUserLoggedIn();
@@ -30,10 +31,12 @@ const AuthProvider = ({ children }) => {
 
       const res = await axios.get('/api/auth/me', config);
       setCurrentUser(res.data);
+      setUserRole(res.data.rol); // Actualizar el rol al cargar el usuario
       setLoading(false);
     } catch (err) {
       localStorage.removeItem('token');
       setCurrentUser(null);
+      setUserRole(null); // Limpiar el rol si hay error
       setError(err.response?.data?.msg || 'Error al verificar sesión');
       setLoading(false);
     }
@@ -75,12 +78,30 @@ const AuthProvider = ({ children }) => {
 
       const res = await axios.post('/api/auth/login', { email, password }, config);
       
-      localStorage.setItem('token', res.data.token);
-      setCurrentUser(res.data.usuario);
+      if (res.data.token && res.data.usuario) {
+        localStorage.setItem('token', res.data.token);
+        // Guardar el rol del usuario
+        setUserRole(res.data.usuario.rol);
+        setCurrentUser(res.data.usuario);
+        
+        // Redirigir según el rol
+        switch(res.data.usuario.rol) {
+          case 'admin':
+            window.location.href = '/admin';
+            break;
+          case 'empleado':
+            window.location.href = '/empleado/dashboard';
+            break;
+          default:
+            window.location.href = '/';
+        }
+      }
+      
       setLoading(false);
       return res.data;
     } catch (err) {
-      setError(err.response?.data?.msg || 'Error al iniciar sesión');
+      console.error('Error de login:', err.response?.data);
+      setError(err.response?.data?.msg || 'Credenciales inválidas');
       setLoading(false);
       throw err;
     }
@@ -89,6 +110,8 @@ const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     setCurrentUser(null);
+    setUserRole(null); // Limpiar el rol al cerrar sesión
+    window.location.href = '/login';
   };
 
   const updateProfile = async (userData) => {
@@ -117,6 +140,11 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // Función auxiliar para verificar roles
+  const hasRole = (allowedRoles) => {
+    return currentUser && allowedRoles.includes(currentUser.rol);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -126,7 +154,12 @@ const AuthProvider = ({ children }) => {
         register,
         login,
         logout,
-        updateProfile
+        updateProfile,
+        userRole,
+        // Funciones de ayuda para verificar roles
+        isAdmin: () => hasRole(['admin']),
+        isEmpleado: () => hasRole(['empleado', 'admin']),
+        isUser: () => hasRole(['usuario', 'empleado', 'admin'])
       }}
     >
       {children}
